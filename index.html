@@ -2526,12 +2526,17 @@
 
             async function callGPT(messages, systemPrompt) {
                 try {
+                    // Build messages array with system prompt prepended
+                    const fullMessages = [
+                        { role: "system", content: systemPrompt },
+                        ...messages,
+                    ];
+
                     const res = await fetch(WORKER_URL, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            instructions: systemPrompt, // system-level guidance
-                            input: messages, // array of {role, content}
+                            messages: fullMessages, // Chat Completions format
                         }),
                     });
                     if (!res.ok) {
@@ -2540,23 +2545,10 @@
                     }
                     const data = await res.json();
 
-                    // Responses API: prefer output_text convenience, else walk output[]
-                    if (
-                        typeof data.output_text === "string" &&
-                        data.output_text.trim()
-                    ) {
-                        return data.output_text.trim();
-                    }
-                    const msg = (data.output || []).find(
-                        (it) => it.type === "message",
-                    );
-                    if (msg && Array.isArray(msg.content)) {
-                        const textPart = msg.content.find(
-                            (c) => c.type === "output_text",
-                        );
-                        if (textPart && textPart.text)
-                            return textPart.text.trim();
-                    }
+                    // Chat Completions API response format
+                    const reply = data?.choices?.[0]?.message?.content;
+                    if (reply && reply.trim()) return reply.trim();
+
                     return "…";
                 } catch (e) {
                     console.error("GPT error:", e);
