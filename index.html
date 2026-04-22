@@ -2617,9 +2617,9 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 requestAnimationFrame(() => { scroll.scrollTop = scroll.scrollHeight; });
             }
 
-            /*function buildNeuronBubble(m) {
+            function buildNeuronBubble(m) {
                 const bubble = el("div", { class: "neuron-bubble from-neuron" + (m.synapse ? " synapse-bubble" : "") });
-                 if (m.synapse) {
+                 /*if (m.synapse) {
                     bubble.appendChild(el("div", { class: "synapse-badge" }, "⚡ Synapse détectée"));
                     bubble.appendChild(el("div", { style: "margin-bottom:6px" }, m.synapse));
                 }
