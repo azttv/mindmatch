@@ -2622,11 +2622,11 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                  /*if (m.synapse) {
                     bubble.appendChild(el("div", { class: "synapse-badge" }, "⚡ Synapse détectée"));
                     bubble.appendChild(el("div", { style: "margin-bottom:6px" }, m.synapse));
-                }
+                }*/
                 const lines = Array.isArray(m.text) ? m.text : [m.text];
                 lines.forEach((line, i) => { bubble.appendChild(el("div", { style: i > 0 ? "margin-top:6px" : "" }, line)); });
                 return bubble;
-            }*/
+            }
 
             async function submitNeuronMessage(text) {
                 if (!text.trim()) return;
