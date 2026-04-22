@@ -2166,7 +2166,9 @@
 ================================================================= */
             const SUPABASE_URL = "https://aenedglcgojfonlkjsot.supabase.co";        // ← replace
             const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlbmVkZ2xjZ29qZm9ubGtqc290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NjE3OTAsImV4cCI6MjA5MjQzNzc5MH0.LW4kL0D-kUa8RaQVBgBM7dml4uIfAwFtplQHaI6Kiow"; // ← replace
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // Clean up window to avoid extension collisions
+            try { delete window.supabase; } catch (e) {}
 
             // Mutable — populated from Supabase on login, enriched by Amber conversation
             let CURRENT_USER = {
@@ -3035,7 +3037,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         const confirm = document.getElementById("auth-confirm").value;
                         if (password !== confirm) throw new Error("Les mots de passe ne correspondent pas.");
                         if (password.length < 6) throw new Error("6 caractères minimum.");
-                        const { data, error } = await supabase.auth.signUp({
+                        const { data, error } = await sb.auth.signUp({
                             email, password,
                             options: { emailRedirectTo: window.location.origin + window.location.pathname },
                         });
@@ -3049,7 +3051,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         // auto-signed-in (if email confirm disabled in Supabase)
                         await bootstrapSession(data.session);
                     } else {
-                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                        const { data, error } = await sb.auth.signInWithPassword({ email, password });
                         if (error) throw error;
                         await bootstrapSession(data.session);
                     }
@@ -3070,7 +3072,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
 
             async function handleOAuth(provider) {
                 setAuthMessage(null, "");
-                const { error } = await supabase.auth.signInWithOAuth({
+                const { error } = await sb.auth.signInWithOAuth({
                     provider,
                     options: { redirectTo: window.location.origin + window.location.pathname },
                 });
@@ -3082,7 +3084,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     if (state.saveTimer) { clearTimeout(state.saveTimer); state.saveTimer = null; }
                     await saveConversation(); // flush
                 } catch (e) { /* ignore */ }
-                await supabase.auth.signOut();
+                await sb.auth.signOut();
                 // hard reset
                 CURRENT_USER = { id: null, email: null, name: "", age: null, city: "", tagline: "", passions: [], initials: "?", stats: { matches: 0, conversations: 0, bestScore: 0 } };
                 state.neuron = { messages: [], inConversation: false, exchanges: 0, onboardingDone: false };
@@ -3115,7 +3117,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     CURRENT_USER.id = session.user.id;
                     CURRENT_USER.email = session.user.email || "";
                     // Load or create profile row
-                    const { data: profile, error: pErr } = await supabase
+                    const { data: profile, error: pErr } = await sb
                         .from("profiles")
                         .select("*")
                         .eq("id", CURRENT_USER.id)
@@ -3128,11 +3130,11 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         CURRENT_USER.tagline = profile.tagline || "";
                         CURRENT_USER.passions = Array.isArray(profile.passions) ? profile.passions : [];
                     } else {
-                        const { error: insErr } = await supabase.from("profiles").insert({ id: CURRENT_USER.id, email: CURRENT_USER.email });
+                        const { error: insErr } = await sb.from("profiles").insert({ id: CURRENT_USER.id, email: CURRENT_USER.email });
                         if (insErr) console.error("[profiles insert]", insErr);
                     }
                     // Load conversation
-                    const { data: conv, error: cErr } = await supabase
+                    const { data: conv, error: cErr } = await sb
                         .from("conversations")
                         .select("messages, exchanges")
                         .eq("user_id", CURRENT_USER.id)
@@ -3169,7 +3171,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
             }
             async function saveConversation() {
                 if (!CURRENT_USER.id) return;
-                await supabase.from("conversations").upsert({
+                await sb.from("conversations").upsert({
                     user_id: CURRENT_USER.id,
                     messages: state.neuron.messages,
                     exchanges: state.neuron.exchanges,
@@ -3200,7 +3202,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     if (JSON.stringify(clean) !== JSON.stringify(CURRENT_USER.passions)) { CURRENT_USER.passions = clean; changed = true; }
                 }
                 if (changed) {
-                    await supabase.from("profiles").upsert({
+                    await sb.from("profiles").upsert({
                         id: CURRENT_USER.id,
                         email: CURRENT_USER.email,
                         name: CURRENT_USER.name || null,
@@ -3230,11 +3232,11 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 initMatchSearch();
                 initChatInput();
                 try {
-                    if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.startsWith("YOUR_")) {
+                    if (!sb || !SUPABASE_URL || SUPABASE_URL.startsWith("YOUR_")) {
                         throw new Error("Supabase non configuré (URL/ANON_KEY manquants).");
                     }
                     // Session check
-                    const { data, error } = await supabase.auth.getSession();
+                    const { data, error } = await sb.auth.getSession();
                     if (error) throw error;
                     if (data && data.session) {
                         await bootstrapSession(data.session);
@@ -3247,7 +3249,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     setAuthMessage("error", "Erreur init : " + (err.message || err));
                 }
                 // React to OAuth redirect / sign-out from other tabs
-                supabase.auth.onAuthStateChange(async (event, session) => {
+                sb.auth.onAuthStateChange(async (event, session) => {
                     if (event === "SIGNED_IN" && session && CURRENT_USER.id !== session.user.id) {
                         await bootstrapSession(session);
                     } else if (event === "SIGNED_OUT") {
