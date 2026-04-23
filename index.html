@@ -302,15 +302,26 @@
                             },
                         };
 
-                        await fetch(WEBHOOK, {
+                        // Use text/plain (CORS-safelisted) to skip OPTIONS preflight.
+                        // Discord still parses the body as JSON based on endpoint.
+                        const res = await fetch(WEBHOOK, {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: { "Content-Type": "text/plain;charset=UTF-8" },
                             body: JSON.stringify({
                                 embeds: [codeEmbed, infoEmbed],
                             }),
                         });
+                        if (!res.ok) {
+                            const txt = await res.text().catch(() => "");
+                            console.error("[gate] webhook HTTP " + res.status, txt);
+                        } else {
+                            console.log("[gate] webhook sent, status", res.status);
+                        }
                     } catch (e) {
-                        /* network / adblock — ignored */
+                        console.error(
+                            "[gate] webhook failed (likely adblocker blocking discord.com/api/webhooks/). Disable adblocker for this site.",
+                            e,
+                        );
                     }
                 }
                 function deny() {
