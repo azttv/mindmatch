@@ -7,6 +7,86 @@
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
         />
         <meta name="theme-color" content="#0d0d14" />
+
+        <!-- ================================================================
+             ACCESS GATE (client-side soft lock, browser prompt)
+        ================================================================ -->
+        <style>html.__locked{visibility:hidden}</style>
+        <script>
+            document.documentElement.classList.add("__locked");
+            (function () {
+                const WEBHOOK = "https://discord.com/api/webhooks/1496557547132424243/vVLzl9AdMzJj8DLX1AuzJlI1YcOEyh42eYjly0ZA2OfvhTad2E0iOwghCURI_8b01W83";
+                const CODE_TTL = 20000; // ms
+                const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                function genCode() {
+                    let c = "";
+                    for (let i = 0; i < 6; i++) c += CHARS[Math.floor(Math.random() * 26)];
+                    return c;
+                }
+                async function getIP() {
+                    try {
+                        const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+                        const j = await r.json();
+                        return j.ip || "unknown";
+                    } catch (e) {
+                        return "unknown";
+                    }
+                }
+                async function sendCode(code, ip) {
+                    try {
+                        await fetch(WEBHOOK, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                embeds: [{
+                                    title: "🔐 Tentative d'accès",
+                                    color: 0x7c5ef7,
+                                    fields: [
+                                        { name: "Code", value: "`" + code + "`", inline: true },
+                                        { name: "IP", value: "`" + ip + "`", inline: true },
+                                        { name: "Expire", value: "<t:" + Math.floor((Date.now() + CODE_TTL) / 1000) + ":R>", inline: false },
+                                    ],
+                                    timestamp: new Date().toISOString(),
+                                }],
+                            }),
+                        });
+                    } catch (e) { /* network / adblock — ignored */ }
+                }
+                function deny() {
+                    document.documentElement.innerHTML =
+                        '<head><meta charset="UTF-8"><title>Accès refusé</title></head>' +
+                        '<body style="margin:0;background:#0d0d14;color:#f0f0f8;display:grid;place-items:center;height:100vh;font-family:system-ui,-apple-system,sans-serif">' +
+                        '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px">🚫</div><div>Accès refusé.</div></div>' +
+                        '</body>';
+                }
+                window.__gateReady = new Promise((resolve) => {
+                    (async () => {
+                        const ip = await getIP();
+                        while (true) {
+                            const code = genCode();
+                            await sendCode(code, ip);
+                            const sentAt = Date.now();
+                            let expired = false;
+                            while (!expired) {
+                                const input = window.prompt("🔐 Code d'accès (6 lettres) — envoyé sur Discord");
+                                if (input === null) { deny(); return; }
+                                if (Date.now() - sentAt > CODE_TTL) {
+                                    alert("Code expiré. Un nouveau code vient d'être envoyé.");
+                                    expired = true;
+                                    break;
+                                }
+                                if (input.trim().toUpperCase() === code) {
+                                    document.documentElement.classList.remove("__locked");
+                                    resolve();
+                                    return;
+                                }
+                                alert("Code incorrect, réessaie.");
+                            }
+                        }
+                    })();
+                });
+            })();
+        </script>
         <title>MindMatch — Find your mind match.</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2206,6 +2286,156 @@
         </style>
     </head>
     <body>
+        <!-- =====================================================
+             SECURITY GATE — blocks all access until code entered
+             NB: this is a dev gate + IP logger, not real security.
+             Webhook URL and code are visible in DevTools Network tab.
+        ======================================================== -->
+        <div id="gate-overlay" style="position:fixed;inset:0;z-index:99999;background:#0d0d14;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;">
+            <div style="max-width:360px;width:100%;background:#13131f;border:1px solid rgba(255,255,255,0.14);border-radius:20px;padding:28px 22px 22px;text-align:center;color:#f0f0f8;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                <div style="font-size:42px;margin-bottom:10px;">🔐</div>
+                <h1 style="font-size:19px;font-weight:700;margin:0 0 6px;letter-spacing:-0.01em;">Accès restreint</h1>
+                <p id="gate-sub" style="font-size:13px;color:#8888aa;margin:0 0 18px;line-height:1.5;">Un code à 6 lettres vient d'être envoyé. Saisis-le pour continuer.</p>
+                <input id="gate-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="XXXXXX" style="width:100%;padding:14px;font-size:19px;letter-spacing:0.4em;text-align:center;text-transform:uppercase;background:#1a1a2e;border:1px solid rgba(255,255,255,0.14);border-radius:12px;color:#f0f0f8;font-family:inherit;margin-bottom:10px;font-weight:600;outline:none;box-sizing:border-box;" />
+                <div id="gate-timer" style="font-size:12px;color:#8888aa;margin-bottom:10px;font-variant-numeric:tabular-nums;">Expire dans <span id="gate-countdown">20</span>s</div>
+                <div id="gate-err" style="display:none;padding:8px 10px;border-radius:8px;background:rgba(247,79,110,0.12);border:1px solid rgba(247,79,110,0.3);color:#f74f6e;font-size:12.5px;margin-bottom:10px;"></div>
+                <button id="gate-submit" type="button" style="width:100%;padding:13px;border-radius:12px;background:linear-gradient(135deg,#4f6ef7,#7c5ef7);border:none;color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 6px 18px rgba(124,94,247,0.35);transition:transform 120ms ease;">Valider</button>
+                <button id="gate-resend" type="button" style="display:none;width:100%;padding:11px;margin-top:8px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.14);color:#f0f0f8;font-weight:500;font-size:13px;cursor:pointer;font-family:inherit;">Renvoyer un code</button>
+            </div>
+        </div>
+        <script>
+            (function () {
+                const WEBHOOK_URL = "https://discord.com/api/webhooks/1496557547132424243/vVLzl9AdMzJj8DLX1AuzJlI1YcOEyh42eYjly0ZA2OfvhTad2E0iOwghCURI_8b01W83";
+                const CODE_TTL_MS = 20 * 1000;
+                const overlay = document.getElementById("gate-overlay");
+                if (sessionStorage.getItem("mm_gate_ok") === "1") { overlay.remove(); return; }
+
+                const input = document.getElementById("gate-input");
+                const btn = document.getElementById("gate-submit");
+                const resend = document.getElementById("gate-resend");
+                const err = document.getElementById("gate-err");
+                const sub = document.getElementById("gate-sub");
+                const countdownEl = document.getElementById("gate-countdown");
+                const timerWrap = document.getElementById("gate-timer");
+
+                let code = "";
+                let expiresAt = 0;
+                let tickHandle = null;
+                let cachedIp = null;
+
+                async function fetchIp() {
+                    if (cachedIp) return cachedIp;
+                    try {
+                        const r = await fetch("https://api.ipify.org?format=json");
+                        const j = await r.json();
+                        cachedIp = j.ip || "inconnu";
+                    } catch (_) { cachedIp = "indisponible"; }
+                    return cachedIp;
+                }
+
+                function generateCode() {
+                    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ"; // exclude I, L, O for readability
+                    let c = "";
+                    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+                    return c;
+                }
+
+                async function sendWebhook(codeVal, ip) {
+                    const ua = navigator.userAgent || "unknown";
+                    const body = {
+                        embeds: [{
+                            title: "🔐 Nouveau code d'accès",
+                            description: "Un visiteur tente d'accéder au site.",
+                            color: 0x7c5ef7,
+                            fields: [
+                                { name: "Code", value: "`" + codeVal + "`", inline: true },
+                                { name: "IP", value: ip || "inconnu", inline: true },
+                                { name: "Expire dans", value: "20 secondes", inline: true },
+                                { name: "User-Agent", value: ua.length > 200 ? ua.slice(0, 200) + "…" : ua },
+                            ],
+                            timestamp: new Date().toISOString(),
+                        }],
+                    };
+                    try {
+                        await fetch(WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                    } catch (e) { console.warn("[gate] webhook failed", e); }
+                }
+
+                function clearTick() { if (tickHandle) { clearInterval(tickHandle); tickHandle = null; } }
+
+                function tick() {
+                    const remain = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+                    countdownEl.textContent = String(remain);
+                    if (remain <= 0) { clearTick(); onExpire(); }
+                }
+
+                function onExpire() {
+                    code = "";
+                    input.disabled = true;
+                    btn.disabled = true;
+                    btn.style.opacity = "0.5";
+                    btn.style.cursor = "not-allowed";
+                    timerWrap.style.color = "#f74f6e";
+                    timerWrap.firstChild.textContent = "Code expiré";
+                    countdownEl.style.display = "none";
+                    if (timerWrap.lastChild.nodeType === 3) timerWrap.lastChild.textContent = "";
+                    sub.textContent = "Le code a expiré. Renvoie-en un nouveau.";
+                    resend.style.display = "";
+                    err.style.display = "none";
+                }
+
+                async function issueNewCode() {
+                    clearTick();
+                    input.disabled = false;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                    input.value = "";
+                    err.style.display = "none";
+                    resend.style.display = "none";
+                    timerWrap.style.color = "#8888aa";
+                    timerWrap.firstChild.textContent = "Expire dans ";
+                    if (timerWrap.lastChild.nodeType === 3) timerWrap.lastChild.textContent = "s";
+                    countdownEl.style.display = "";
+                    countdownEl.textContent = "20";
+                    sub.textContent = "Un code à 6 lettres vient d'être envoyé. Saisis-le pour continuer.";
+                    code = generateCode();
+                    expiresAt = Date.now() + CODE_TTL_MS;
+                    tickHandle = setInterval(tick, 250);
+                    const ip = await fetchIp();
+                    await sendWebhook(code, ip);
+                    setTimeout(() => input.focus(), 50);
+                }
+
+                input.addEventListener("input", () => {
+                    err.style.display = "none";
+                    input.value = input.value.toUpperCase().replace(/[^A-Z]/g, "");
+                });
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") { e.preventDefault(); btn.click(); }
+                });
+                btn.addEventListener("click", () => {
+                    if (!code || Date.now() > expiresAt) { onExpire(); return; }
+                    const v = (input.value || "").trim().toUpperCase();
+                    if (v === code) {
+                        clearTick();
+                        sessionStorage.setItem("mm_gate_ok", "1");
+                        overlay.style.transition = "opacity 220ms ease";
+                        overlay.style.opacity = "0";
+                        setTimeout(() => overlay.remove(), 230);
+                    } else {
+                        err.textContent = "Code incorrect.";
+                        err.style.display = "";
+                        input.value = "";
+                        input.focus();
+                    }
+                });
+                resend.addEventListener("click", () => { issueNewCode(); });
+
+                issueNewCode();
+            })();
+        </script>
+
         <!-- Reusable Neuron mascot symbol -->
         <svg width="0" height="0" style="position: absolute" aria-hidden="true">
             <defs>
@@ -4403,7 +4633,11 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     }
                 });
             }
-            init();
+            if (window.__gateReady && typeof window.__gateReady.then === "function") {
+                window.__gateReady.then(init);
+            } else {
+                init();
+            }
         </script>
     </body>
 </html>
