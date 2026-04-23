@@ -15,6 +15,7 @@
             rel="stylesheet"
         />
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
         <style>
             /* ============================================================
      DESIGN TOKENS
@@ -1671,6 +1672,406 @@
             }
 
             /* ============================================================
+     SETTINGS PANEL
+  ============================================================ */
+            .settings-panel {
+                position: absolute;
+                inset: 0;
+                background: var(--bg);
+                z-index: 50;
+                display: flex;
+                flex-direction: column;
+                transform: translateX(100%);
+                transition: transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+                overflow: hidden;
+            }
+            .settings-panel.open { transform: translateX(0); }
+            .settings-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: calc(var(--safe-top) + 16px) 16px 14px;
+                border-bottom: 1px solid var(--border);
+                background: rgba(13, 13, 20, 0.92);
+                backdrop-filter: blur(10px);
+                flex-shrink: 0;
+            }
+            .settings-back {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                display: grid;
+                place-items: center;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                color: var(--text);
+                transition: background 150ms ease;
+                flex-shrink: 0;
+            }
+            .settings-back:hover { background: var(--surface-3); }
+            .settings-header-title {
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                margin: 0;
+            }
+            .settings-scroll {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px 16px calc(var(--safe-bottom) + 20px);
+            }
+            .settings-category {
+                margin-bottom: 22px;
+            }
+            .settings-category-title {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: var(--text-muted);
+                font-weight: 600;
+                margin: 0 4px 10px;
+            }
+            .settings-group {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                overflow: hidden;
+            }
+            .settings-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 16px;
+                cursor: pointer;
+                transition: background 150ms ease;
+                border-bottom: 1px solid var(--border);
+                color: var(--text);
+                font-size: 14px;
+                width: 100%;
+                text-align: left;
+                background: transparent;
+            }
+            .settings-row:last-child { border-bottom: none; }
+            .settings-row:hover { background: var(--surface-2); }
+            .settings-row-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+                background: var(--surface-2);
+                display: grid;
+                place-items: center;
+                color: var(--accent-2);
+                font-size: 15px;
+                flex-shrink: 0;
+            }
+            .settings-row-label {
+                flex: 1;
+                font-weight: 500;
+            }
+            .settings-row-value {
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-right: 4px;
+            }
+            .settings-row-chev {
+                color: var(--text-faint);
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+            .settings-row.danger { color: var(--danger); }
+            .settings-row.danger .settings-row-icon { color: var(--danger); background: rgba(247, 79, 110, 0.12); }
+
+            /* PREMIUM PAGE */
+            .pro-page {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 20px 16px 30px;
+                min-height: 100%;
+            }
+            .pro-page-title {
+                font-size: 40px;
+                font-weight: 800;
+                margin: 14px 0 6px;
+                letter-spacing: -0.03em;
+                background: linear-gradient(135deg, #ffd27a 0%, #ff8ab8 40%, #7c5ef7 80%, #4f6ef7 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                filter: drop-shadow(0 0 22px rgba(255, 138, 184, 0.35));
+                animation: pro-glow 2.8s ease-in-out infinite;
+            }
+            @keyframes pro-glow {
+                0%, 100% { filter: drop-shadow(0 0 22px rgba(255, 138, 184, 0.35)); }
+                50% { filter: drop-shadow(0 0 36px rgba(124, 94, 247, 0.65)); }
+            }
+            .pro-page-sub {
+                color: var(--text-muted);
+                font-size: 14.5px;
+                max-width: 320px;
+                margin: 0 0 24px;
+            }
+            .pro-perks {
+                width: 100%;
+                max-width: 360px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 26px;
+            }
+            .pro-perk {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 13px 14px;
+                border-radius: 14px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                text-align: left;
+            }
+            .pro-perk-icon {
+                color: var(--accent-2);
+                font-size: 15px;
+                flex-shrink: 0;
+                padding-top: 2px;
+            }
+            .pro-perk-title {
+                font-weight: 600;
+                font-size: 14px;
+                margin: 0 0 2px;
+            }
+            .pro-perk-desc {
+                font-size: 12.5px;
+                color: var(--text-muted);
+                line-height: 1.4;
+                margin: 0;
+            }
+            .pro-cta {
+                position: relative;
+                width: 100%;
+                max-width: 360px;
+                padding: 15px 20px;
+                border-radius: 14px;
+                background: var(--gradient);
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                letter-spacing: 0.01em;
+                box-shadow: 0 10px 28px rgba(124, 94, 247, 0.45);
+                overflow: hidden;
+                transition: transform 150ms ease;
+            }
+            .pro-cta:hover { transform: translateY(-1px); }
+            .pro-cta::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: -60%;
+                width: 40%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+                animation: pro-sweep 4s infinite;
+                pointer-events: none;
+            }
+            @keyframes pro-sweep {
+                0% { left: -60%; }
+                45% { left: 140%; }
+                100% { left: 140%; }
+            }
+            .pro-decline {
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-top: 16px;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                cursor: pointer;
+                opacity: 0;
+                animation: pro-decline-in 600ms ease forwards;
+                animation-delay: 4s;
+            }
+            @keyframes pro-decline-in {
+                to { opacity: 1; }
+            }
+            .pro-cta.downgrade {
+                background: transparent;
+                border: 1px solid var(--danger);
+                color: var(--danger);
+                box-shadow: none;
+            }
+            .pro-cta.downgrade::after { display: none; }
+
+            /* COMPTE SUB-PAGE */
+            .settings-sub-title {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: var(--text-muted);
+                font-weight: 600;
+                margin: 18px 4px 8px;
+            }
+            .settings-sub-title:first-child { margin-top: 4px; }
+
+            /* PREMIUM BADGE ON AVATAR */
+            .profile-avatar-wrap {
+                position: relative;
+                display: inline-block;
+            }
+            .pro-badge {
+                position: absolute;
+                bottom: 2px;
+                right: 2px;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #ffd27a, #ff8ab8 50%, #7c5ef7);
+                display: grid;
+                place-items: center;
+                color: #fff;
+                font-size: 16px;
+                box-shadow: 0 4px 14px rgba(124, 94, 247, 0.55), 0 0 0 3px var(--bg);
+                animation: pro-badge-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes pro-badge-in {
+                from { transform: scale(0) rotate(-180deg); opacity: 0; }
+                to { transform: scale(1) rotate(0); opacity: 1; }
+            }
+
+            /* MODAL */
+            .modal-backdrop {
+                position: absolute;
+                inset: 0;
+                background: rgba(5, 5, 10, 0.75);
+                backdrop-filter: blur(6px);
+                z-index: 100;
+                display: grid;
+                place-items: center;
+                padding: 20px;
+                animation: modal-fade 200ms ease;
+            }
+            @keyframes modal-fade {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .modal {
+                width: 100%;
+                max-width: 380px;
+                background: var(--surface);
+                border: 1px solid var(--border-strong);
+                border-radius: 20px;
+                padding: 22px 20px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                max-height: 92%;
+                overflow-y: auto;
+                animation: modal-pop 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes modal-pop {
+                from { transform: scale(0.9); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+            .modal-title {
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+                margin: 0;
+            }
+            .modal-desc {
+                font-size: 13.5px;
+                color: var(--text-muted);
+                line-height: 1.5;
+                margin: -4px 0 2px;
+            }
+            .modal-desc.danger { color: var(--danger); }
+            .modal-input {
+                width: 100%;
+                padding: 12px 14px;
+                border-radius: 12px;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                color: var(--text);
+                font-size: 14px;
+                font-family: inherit;
+            }
+            .modal-input:focus { border-color: var(--accent); }
+            .modal-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 4px;
+            }
+            .modal-btn {
+                flex: 1;
+                padding: 12px 14px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 150ms ease;
+                border: 1px solid transparent;
+            }
+            .modal-btn.cancel {
+                background: var(--surface-2);
+                border-color: var(--border);
+                color: var(--text);
+            }
+            .modal-btn.cancel:hover { background: var(--surface-3); }
+            .modal-btn.primary {
+                background: var(--gradient);
+                color: #fff;
+                box-shadow: 0 6px 16px rgba(124, 94, 247, 0.35);
+            }
+            .modal-btn.danger {
+                background: var(--danger);
+                color: #fff;
+            }
+            .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+            .modal-qr {
+                display: grid;
+                place-items: center;
+                padding: 16px;
+                background: #fff;
+                border-radius: 14px;
+            }
+            .modal-qr svg { width: 180px; height: 180px; }
+            .modal-secret {
+                font-family: ui-monospace, Menlo, monospace;
+                font-size: 13px;
+                padding: 10px 12px;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                text-align: center;
+                word-break: break-all;
+                user-select: all;
+            }
+            .modal-err {
+                padding: 9px 12px;
+                border-radius: 10px;
+                background: rgba(247, 79, 110, 0.12);
+                border: 1px solid rgba(247, 79, 110, 0.3);
+                color: var(--danger);
+                font-size: 13px;
+            }
+            .modal-ok {
+                padding: 9px 12px;
+                border-radius: 10px;
+                background: rgba(79, 200, 122, 0.12);
+                border: 1px solid rgba(79, 200, 122, 0.3);
+                color: var(--success);
+                font-size: 13px;
+            }
+
+            /* CONFETTI */
+            .confetti-canvas {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                z-index: 60;
+            }
+
+            /* ============================================================
      BOTTOM NAV
   ============================================================ */
             .bottom-nav {
@@ -2042,7 +2443,7 @@
                 <section id="tab-profile" class="tab-content">
                     <header class="header">
                         <h1 class="header-title">Mon Profil</h1>
-                        <button class="icon-btn" aria-label="Paramètres">
+                        <button class="icon-btn" aria-label="Paramètres" id="btn-settings">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="3" />
                                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -2081,6 +2482,23 @@
                     <span class="nav-lock"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 10V6a6 6 0 1 0-12 0v4H4v12h16V10h-2zM8 6a4 4 0 1 1 8 0v4H8V6z" /></svg></span>
                 </button>
             </nav>
+
+            <!-- SETTINGS PANEL (slides in from right) -->
+            <div class="settings-panel" id="settings-panel">
+                <div class="settings-header">
+                    <button class="settings-back" id="settings-back" aria-label="Retour">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h2 class="settings-header-title" id="settings-header-title">Paramètres</h2>
+                </div>
+                <div class="settings-scroll" id="settings-scroll"></div>
+            </div>
+
+            <!-- MODAL ROOT -->
+            <div id="modal-root"></div>
+
+            <!-- CONFETTI -->
+            <canvas class="confetti-canvas" id="confetti-canvas" style="display:none"></canvas>
         </div>
 
         <script>
@@ -2170,6 +2588,8 @@
                 tagline: "",
                 passions: [],
                 initials: "?",
+                phone: "",
+                isPro: false,
                 stats: { matches: 0, conversations: 0, bestScore: 0 },
             };
 
@@ -2861,7 +3281,16 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     : "En cours de cartographie";
 
                 root.appendChild(el("div", { class: "profile-hero" }, [
-                    el("div", { class: "profile-avatar-big" }, initials),
+                    (() => {
+                        const wrap = el("div", { class: "profile-avatar-wrap" });
+                        wrap.appendChild(el("div", { class: "profile-avatar-big" }, initials));
+                        if (CURRENT_USER.isPro) {
+                            const badge = el("div", { class: "pro-badge", title: "Affiniti Pro" });
+                            badge.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                            wrap.appendChild(badge);
+                        }
+                        return wrap;
+                    })(),
                     el("h2", { class: "profile-name-big" }, displayHead),
                     CURRENT_USER.city
                         ? el("div", { class: "profile-meta" }, [svgIcon('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', 13, 13), document.createTextNode(CURRENT_USER.city)])
@@ -2913,10 +3342,6 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         el("div", { class: "stat-card" }, [el("div", { class: "stat-value" }, CURRENT_USER.stats.bestScore + "%"), el("div", { class: "stat-label" }, "Score max")]),
                     ]),
                 ]));
-
-                const logoutBtn = el("button", { class: "btn-logout", id: "btn-logout" }, "Se déconnecter");
-                logoutBtn.addEventListener("click", handleLogout);
-                root.appendChild(logoutBtn);
             }
 
             function computeProfileCompletion() {
@@ -3119,6 +3544,8 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         CURRENT_USER.city = profile.city || "";
                         CURRENT_USER.tagline = profile.tagline || "";
                         CURRENT_USER.passions = Array.isArray(profile.passions) ? profile.passions : [];
+                        CURRENT_USER.isPro = !!profile.is_pro;
+                        CURRENT_USER.phone = session.user.phone || profile.phone || "";
                     } else {
                         const { error: insErr } = await sb.from("profiles").insert({ id: CURRENT_USER.id, email: CURRENT_USER.email });
                         if (insErr) console.error("[profiles insert]", insErr);
@@ -3213,6 +3640,530 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
             }
 
             /* =================================================================
+   9b. SETTINGS PANEL
+================================================================= */
+            let settingsStack = [];
+
+            function openSettings() {
+                settingsStack = ["root"];
+                renderSettings();
+                document.getElementById("settings-panel").classList.add("open");
+            }
+            function closeSettings() {
+                document.getElementById("settings-panel").classList.remove("open");
+            }
+            function settingsBack() {
+                if (settingsStack.length > 1) {
+                    settingsStack.pop();
+                    renderSettings();
+                } else {
+                    closeSettings();
+                }
+            }
+            function navigateSettings(page) {
+                settingsStack.push(page);
+                renderSettings();
+            }
+
+            function renderSettings() {
+                const page = settingsStack[settingsStack.length - 1] || "root";
+                const title = document.getElementById("settings-header-title");
+                const scroll = document.getElementById("settings-scroll");
+                scroll.innerHTML = "";
+                scroll.scrollTop = 0;
+                if (page === "root") {
+                    title.textContent = "Paramètres";
+                    scroll.appendChild(renderSettingsRoot());
+                } else if (page === "pro") {
+                    title.textContent = CURRENT_USER.isPro ? "Affiniti Pro" : "Obtenir Affiniti Pro";
+                    scroll.appendChild(renderSettingsPro());
+                } else if (page === "account") {
+                    title.textContent = "Compte";
+                    scroll.appendChild(renderSettingsAccount());
+                }
+            }
+
+            function settingsRow({ icon, label, value, onclick, danger, chevron = true }) {
+                const row = el("button", { class: "settings-row" + (danger ? " danger" : ""), type: "button" });
+                if (onclick) row.addEventListener("click", onclick);
+                const iconWrap = el("div", { class: "settings-row-icon" });
+                iconWrap.innerHTML = `<i class="${icon}"></i>`;
+                row.appendChild(iconWrap);
+                row.appendChild(el("div", { class: "settings-row-label" }, label));
+                if (value) row.appendChild(el("div", { class: "settings-row-value" }, value));
+                if (chevron) row.appendChild(el("i", { class: "fa-solid fa-chevron-right settings-row-chev" }));
+                return row;
+            }
+
+            function renderSettingsRoot() {
+                const root = document.createElement("div");
+                // Category: Paramètres du compte
+                const cat = el("div", { class: "settings-category" });
+                cat.appendChild(el("h3", { class: "settings-category-title" }, "Paramètres du compte"));
+                const group = el("div", { class: "settings-group" });
+                group.appendChild(settingsRow({
+                    icon: "fa-solid fa-circle-check",
+                    label: CURRENT_USER.isPro ? "Affiniti Pro (actif)" : "Obtenir Affiniti Pro",
+                    onclick: () => navigateSettings("pro"),
+                }));
+                group.appendChild(settingsRow({
+                    icon: "fa-solid fa-user",
+                    label: "Compte",
+                    onclick: () => navigateSettings("account"),
+                }));
+                cat.appendChild(group);
+                root.appendChild(cat);
+                return root;
+            }
+
+            /* --- PREMIUM PAGE --- */
+            function renderSettingsPro() {
+                const root = el("div", { class: "pro-page" });
+                root.appendChild(el("h1", { class: "pro-page-title" }, "Affiniti Pro"));
+                root.appendChild(el("p", { class: "pro-page-sub" }, CURRENT_USER.isPro
+                    ? "Tu bénéficies déjà de toutes les fonctionnalités Pro."
+                    : "Passe à la vitesse supérieure — matchs illimités, analyses plus fines, priorité sur Amber."));
+
+                const perks = [
+                    { icon: "fa-solid fa-infinity", title: "Matchs illimités", desc: "Plus de plafond journalier — explore tous les profils que tu veux." },
+                    { icon: "fa-solid fa-bolt", title: "Synapses prioritaires", desc: "Détection avancée des alignements profonds entre esprits." },
+                    { icon: "fa-solid fa-wand-magic-sparkles", title: "Amber boostée", desc: "Analyses contextuelles illimitées et réponses suggérées premium." },
+                    { icon: "fa-solid fa-eye", title: "Voir qui t'a liké", desc: "Accède à la liste complète des profils qui ont matché avec toi." },
+                    { icon: "fa-solid fa-shield-halved", title: "Mode privé", desc: "Apparais uniquement aux profils que tu as déjà likés." },
+                ];
+                const perksList = el("div", { class: "pro-perks" });
+                perks.forEach((p) => {
+                    const item = el("div", { class: "pro-perk" });
+                    const ic = el("div", { class: "pro-perk-icon" });
+                    ic.innerHTML = `<i class="${p.icon}"></i>`;
+                    item.appendChild(ic);
+                    const txt = el("div", {});
+                    txt.appendChild(el("p", { class: "pro-perk-title" }, p.title));
+                    txt.appendChild(el("p", { class: "pro-perk-desc" }, p.desc));
+                    item.appendChild(txt);
+                    perksList.appendChild(item);
+                });
+                root.appendChild(perksList);
+
+                if (CURRENT_USER.isPro) {
+                    const cta = el("button", { class: "pro-cta downgrade", type: "button" }, "Annuler mon abonnement Pro");
+                    cta.addEventListener("click", () => togglePro(false));
+                    root.appendChild(cta);
+                } else {
+                    const cta = el("button", { class: "pro-cta", type: "button" }, "Obtenir Affiniti Pro");
+                    cta.addEventListener("click", () => togglePro(true));
+                    root.appendChild(cta);
+                    const decline = el("button", { class: "pro-decline", type: "button" }, "Je reste sur la version limitée d'Affiniti");
+                    decline.addEventListener("click", closeSettings);
+                    root.appendChild(decline);
+                }
+                return root;
+            }
+
+            async function togglePro(enable) {
+                CURRENT_USER.isPro = enable;
+                if (CURRENT_USER.id) {
+                    await sb.from("profiles").update({ is_pro: enable, updated_at: new Date().toISOString() }).eq("id", CURRENT_USER.id);
+                }
+                closeSettings();
+                switchTab("profile");
+                // wait for tab transition, then render + animate
+                setTimeout(() => {
+                    renderProfile();
+                    if (enable) launchConfetti();
+                }, 200);
+            }
+
+            /* --- ACCOUNT PAGE --- */
+            function renderSettingsAccount() {
+                const root = document.createElement("div");
+
+                // Informations du compte
+                root.appendChild(el("h3", { class: "settings-sub-title" }, "Informations du compte"));
+                const info = el("div", { class: "settings-group" });
+                info.appendChild(settingsRow({
+                    icon: "fa-solid fa-envelope",
+                    label: "E-mail",
+                    value: CURRENT_USER.email || "—",
+                    chevron: false,
+                    onclick: null,
+                }));
+                if (CURRENT_USER.phone) {
+                    info.appendChild(settingsRow({
+                        icon: "fa-solid fa-phone",
+                        label: "Téléphone",
+                        value: CURRENT_USER.phone,
+                        onclick: () => modalPhoneSetup(),
+                    }));
+                } else {
+                    info.appendChild(settingsRow({
+                        icon: "fa-solid fa-phone",
+                        label: "Téléphone",
+                        onclick: () => modalPhoneSetup(),
+                    }));
+                }
+                info.appendChild(settingsRow({
+                    icon: "fa-solid fa-fingerprint",
+                    label: "ID Utilisateur",
+                    value: (CURRENT_USER.id || "").slice(0, 8) + "…",
+                    chevron: false,
+                    onclick: () => { navigator.clipboard?.writeText(CURRENT_USER.id || ""); },
+                }));
+                root.appendChild(info);
+
+                // Sécurité
+                root.appendChild(el("h3", { class: "settings-sub-title" }, "Sécurité"));
+                const sec = el("div", { class: "settings-group" });
+                sec.appendChild(settingsRow({
+                    icon: "fa-solid fa-key",
+                    label: "Mot de passe",
+                    onclick: () => modalPasswordChange(),
+                }));
+                sec.appendChild(settingsRow({
+                    icon: "fa-solid fa-mobile-screen-button",
+                    label: "Authentificateur",
+                    onclick: () => modalAuthenticator(),
+                }));
+                root.appendChild(sec);
+
+                // Gestion du compte
+                root.appendChild(el("h3", { class: "settings-sub-title" }, "Gestion du compte"));
+                const manage = el("div", { class: "settings-group" });
+                manage.appendChild(settingsRow({
+                    icon: "fa-solid fa-trash",
+                    label: "Supprimer le compte",
+                    danger: true,
+                    onclick: () => modalDeleteAccount(),
+                }));
+                root.appendChild(manage);
+
+                // Logout
+                const logoutBtn = el("button", { class: "btn-logout", style: "margin-top:22px" }, "Se déconnecter");
+                logoutBtn.addEventListener("click", async () => {
+                    closeSettings();
+                    await handleLogout();
+                });
+                root.appendChild(logoutBtn);
+                return root;
+            }
+
+            /* =================================================================
+   9c. MODAL SYSTEM
+================================================================= */
+            function openModal(contentBuilder) {
+                const root = document.getElementById("modal-root");
+                root.innerHTML = "";
+                const backdrop = el("div", { class: "modal-backdrop" });
+                backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+                const modal = el("div", { class: "modal" });
+                contentBuilder(modal, closeModal);
+                backdrop.appendChild(modal);
+                root.appendChild(backdrop);
+            }
+            function closeModal() {
+                document.getElementById("modal-root").innerHTML = "";
+            }
+
+            /* --- PHONE SETUP --- */
+            function modalPhoneSetup() {
+                let step = CURRENT_USER.phone ? "remove" : "enter";
+                let pendingPhone = "";
+                openModal((modal, close) => {
+                    const render = () => {
+                        modal.innerHTML = "";
+                        if (step === "remove") {
+                            modal.appendChild(el("h3", { class: "modal-title" }, "Numéro de téléphone"));
+                            modal.appendChild(el("p", { class: "modal-desc" }, "Ton numéro actuel : " + CURRENT_USER.phone));
+                            const actions = el("div", { class: "modal-actions" });
+                            const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Fermer");
+                            cancel.addEventListener("click", close);
+                            const change = el("button", { class: "modal-btn primary", type: "button" }, "Changer");
+                            change.addEventListener("click", () => { step = "enter"; render(); });
+                            actions.appendChild(cancel);
+                            actions.appendChild(change);
+                            modal.appendChild(actions);
+                        } else if (step === "enter") {
+                            modal.appendChild(el("h3", { class: "modal-title" }, "Ajouter un numéro"));
+                            modal.appendChild(el("p", { class: "modal-desc" }, "Format international, ex : +33612345678"));
+                            const input = el("input", { class: "modal-input", type: "tel", placeholder: "+33...", value: pendingPhone });
+                            modal.appendChild(input);
+                            const err = el("div", { style: "display:none" });
+                            modal.appendChild(err);
+                            const actions = el("div", { class: "modal-actions" });
+                            const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                            cancel.addEventListener("click", close);
+                            const submit = el("button", { class: "modal-btn primary", type: "button" }, "Envoyer le code");
+                            submit.addEventListener("click", async () => {
+                                const phone = input.value.trim();
+                                if (!/^\+\d{6,15}$/.test(phone)) {
+                                    err.className = "modal-err"; err.style.display = ""; err.textContent = "Numéro invalide.";
+                                    return;
+                                }
+                                submit.disabled = true; submit.textContent = "Envoi…";
+                                const { error } = await sb.auth.updateUser({ phone });
+                                if (error) {
+                                    err.className = "modal-err"; err.style.display = ""; err.textContent = error.message;
+                                    submit.disabled = false; submit.textContent = "Envoyer le code";
+                                    return;
+                                }
+                                pendingPhone = phone; step = "verify"; render();
+                            });
+                            actions.appendChild(cancel);
+                            actions.appendChild(submit);
+                            modal.appendChild(actions);
+                        } else if (step === "verify") {
+                            modal.appendChild(el("h3", { class: "modal-title" }, "Vérification"));
+                            modal.appendChild(el("p", { class: "modal-desc" }, "Entre le code à 6 chiffres reçu au " + pendingPhone));
+                            const input = el("input", { class: "modal-input", type: "text", inputmode: "numeric", maxlength: "6", placeholder: "123456" });
+                            modal.appendChild(input);
+                            const err = el("div", { style: "display:none" });
+                            modal.appendChild(err);
+                            const actions = el("div", { class: "modal-actions" });
+                            const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                            cancel.addEventListener("click", close);
+                            const submit = el("button", { class: "modal-btn primary", type: "button" }, "Valider");
+                            submit.addEventListener("click", async () => {
+                                const token = input.value.trim();
+                                if (!/^\d{6}$/.test(token)) {
+                                    err.className = "modal-err"; err.style.display = ""; err.textContent = "Code à 6 chiffres requis.";
+                                    return;
+                                }
+                                submit.disabled = true; submit.textContent = "Validation…";
+                                const { error } = await sb.auth.verifyOtp({ phone: pendingPhone, token, type: "phone_change" });
+                                if (error) {
+                                    err.className = "modal-err"; err.style.display = ""; err.textContent = error.message;
+                                    submit.disabled = false; submit.textContent = "Valider";
+                                    return;
+                                }
+                                CURRENT_USER.phone = pendingPhone;
+                                if (CURRENT_USER.id) await sb.from("profiles").update({ phone: pendingPhone }).eq("id", CURRENT_USER.id);
+                                close();
+                                renderSettings();
+                            });
+                            actions.appendChild(cancel);
+                            actions.appendChild(submit);
+                            modal.appendChild(actions);
+                        }
+                    };
+                    render();
+                });
+            }
+
+            /* --- PASSWORD CHANGE --- */
+            function modalPasswordChange() {
+                openModal((modal, close) => {
+                    modal.appendChild(el("h3", { class: "modal-title" }, "Changer le mot de passe"));
+                    modal.appendChild(el("p", { class: "modal-desc" }, "Confirme d'abord ton mot de passe actuel."));
+                    const cur = el("input", { class: "modal-input", type: "password", placeholder: "Mot de passe actuel", autocomplete: "current-password" });
+                    const nw = el("input", { class: "modal-input", type: "password", placeholder: "Nouveau mot de passe (6+)", autocomplete: "new-password" });
+                    const nw2 = el("input", { class: "modal-input", type: "password", placeholder: "Confirmer le nouveau", autocomplete: "new-password" });
+                    modal.appendChild(cur); modal.appendChild(nw); modal.appendChild(nw2);
+                    const msg = el("div", { style: "display:none" });
+                    modal.appendChild(msg);
+                    const actions = el("div", { class: "modal-actions" });
+                    const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                    cancel.addEventListener("click", close);
+                    const submit = el("button", { class: "modal-btn primary", type: "button" }, "Mettre à jour");
+                    submit.addEventListener("click", async () => {
+                        msg.style.display = "none";
+                        if (nw.value.length < 6) { msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "6 caractères minimum."; return; }
+                        if (nw.value !== nw2.value) { msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "Les deux champs ne correspondent pas."; return; }
+                        submit.disabled = true; submit.textContent = "Vérification…";
+                        // verify current
+                        const { error: siErr } = await sb.auth.signInWithPassword({ email: CURRENT_USER.email, password: cur.value });
+                        if (siErr) {
+                            msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "Mot de passe actuel incorrect.";
+                            submit.disabled = false; submit.textContent = "Mettre à jour";
+                            return;
+                        }
+                        submit.textContent = "Mise à jour…";
+                        const { error: upErr } = await sb.auth.updateUser({ password: nw.value });
+                        if (upErr) {
+                            msg.className = "modal-err"; msg.style.display = ""; msg.textContent = upErr.message;
+                            submit.disabled = false; submit.textContent = "Mettre à jour";
+                            return;
+                        }
+                        msg.className = "modal-ok"; msg.style.display = ""; msg.textContent = "Mot de passe mis à jour.";
+                        submit.textContent = "OK";
+                        setTimeout(close, 1200);
+                    });
+                    actions.appendChild(cancel); actions.appendChild(submit);
+                    modal.appendChild(actions);
+                });
+            }
+
+            /* --- AUTHENTICATOR (TOTP) --- */
+            async function modalAuthenticator() {
+                // Check if TOTP factor exists
+                const { data: factorData } = await sb.auth.mfa.listFactors();
+                const existing = factorData && factorData.totp && factorData.totp.find((f) => f.status === "verified");
+                if (existing) {
+                    // remove flow
+                    openModal((modal, close) => {
+                        modal.appendChild(el("h3", { class: "modal-title" }, "Désactiver l'authentificateur"));
+                        modal.appendChild(el("p", { class: "modal-desc" }, "Confirme pour supprimer l'authentificateur lié à ce compte. Tu pourras en reconfigurer un après."));
+                        const msg = el("div", { style: "display:none" });
+                        modal.appendChild(msg);
+                        const actions = el("div", { class: "modal-actions" });
+                        const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                        cancel.addEventListener("click", close);
+                        const submit = el("button", { class: "modal-btn danger", type: "button" }, "Désactiver");
+                        submit.addEventListener("click", async () => {
+                            submit.disabled = true; submit.textContent = "…";
+                            const { error } = await sb.auth.mfa.unenroll({ factorId: existing.id });
+                            if (error) {
+                                msg.className = "modal-err"; msg.style.display = ""; msg.textContent = error.message;
+                                submit.disabled = false; submit.textContent = "Désactiver";
+                                return;
+                            }
+                            close();
+                        });
+                        actions.appendChild(cancel); actions.appendChild(submit);
+                        modal.appendChild(actions);
+                    });
+                    return;
+                }
+                // enroll flow
+                const { data: enrollData, error: enrollErr } = await sb.auth.mfa.enroll({ factorType: "totp" });
+                if (enrollErr) { alert(enrollErr.message); return; }
+                const factorId = enrollData.id;
+                const qr = enrollData.totp.qr_code;
+                const secret = enrollData.totp.secret;
+                const { data: chData, error: chErr } = await sb.auth.mfa.challenge({ factorId });
+                if (chErr) { alert(chErr.message); return; }
+                const challengeId = chData.id;
+                openModal((modal, close) => {
+                    modal.appendChild(el("h3", { class: "modal-title" }, "Configurer l'authentificateur"));
+                    modal.appendChild(el("p", { class: "modal-desc" }, "Scanne le QR avec Google Authenticator (ou entre la clé manuellement), puis saisis le code à 6 chiffres."));
+                    const qrWrap = el("div", { class: "modal-qr" });
+                    qrWrap.innerHTML = qr;
+                    modal.appendChild(qrWrap);
+                    modal.appendChild(el("div", { class: "modal-secret" }, secret));
+                    const input = el("input", { class: "modal-input", type: "text", inputmode: "numeric", maxlength: "6", placeholder: "123456" });
+                    modal.appendChild(input);
+                    const msg = el("div", { style: "display:none" });
+                    modal.appendChild(msg);
+                    const actions = el("div", { class: "modal-actions" });
+                    const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                    cancel.addEventListener("click", async () => {
+                        await sb.auth.mfa.unenroll({ factorId });
+                        close();
+                    });
+                    const submit = el("button", { class: "modal-btn primary", type: "button" }, "Activer");
+                    submit.addEventListener("click", async () => {
+                        const code = input.value.trim();
+                        if (!/^\d{6}$/.test(code)) { msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "Code à 6 chiffres requis."; return; }
+                        submit.disabled = true; submit.textContent = "Validation…";
+                        const { error } = await sb.auth.mfa.verify({ factorId, challengeId, code });
+                        if (error) {
+                            msg.className = "modal-err"; msg.style.display = ""; msg.textContent = error.message;
+                            submit.disabled = false; submit.textContent = "Activer";
+                            return;
+                        }
+                        msg.className = "modal-ok"; msg.style.display = ""; msg.textContent = "Authentificateur activé.";
+                        setTimeout(close, 1100);
+                    });
+                    actions.appendChild(cancel); actions.appendChild(submit);
+                    modal.appendChild(actions);
+                });
+            }
+
+            /* --- DELETE ACCOUNT --- */
+            function modalDeleteAccount() {
+                openModal((modal, close) => {
+                    modal.appendChild(el("h3", { class: "modal-title" }, "Supprimer mon compte"));
+                    const desc = el("p", { class: "modal-desc danger" }, "Action irréversible. Tu ne pourras pas récupérer un compte supprimé.");
+                    modal.appendChild(desc);
+                    modal.appendChild(el("p", { class: "modal-desc" }, "Entre ton mot de passe pour confirmer."));
+                    const pw = el("input", { class: "modal-input", type: "password", placeholder: "Mot de passe", autocomplete: "current-password" });
+                    modal.appendChild(pw);
+                    const msg = el("div", { style: "display:none" });
+                    modal.appendChild(msg);
+                    const actions = el("div", { class: "modal-actions" });
+                    const cancel = el("button", { class: "modal-btn cancel", type: "button" }, "Annuler");
+                    cancel.addEventListener("click", close);
+                    const submit = el("button", { class: "modal-btn danger", type: "button" }, "Supprimer");
+                    submit.addEventListener("click", async () => {
+                        msg.style.display = "none";
+                        submit.disabled = true; submit.textContent = "Vérification…";
+                        // verify password
+                        const { error: siErr } = await sb.auth.signInWithPassword({ email: CURRENT_USER.email, password: pw.value });
+                        if (siErr) {
+                            msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "Mot de passe incorrect.";
+                            submit.disabled = false; submit.textContent = "Supprimer";
+                            return;
+                        }
+                        submit.textContent = "Suppression…";
+                        const { error: fnErr } = await sb.functions.invoke("delete-account", { body: {} });
+                        if (fnErr) {
+                            msg.className = "modal-err"; msg.style.display = ""; msg.textContent = "Erreur : " + fnErr.message + ". Edge function 'delete-account' non déployée ?";
+                            submit.disabled = false; submit.textContent = "Supprimer";
+                            return;
+                        }
+                        await sb.auth.signOut();
+                        close();
+                        closeSettings();
+                        // reset client state
+                        CURRENT_USER = { id: null, email: null, name: "", age: null, city: "", tagline: "", passions: [], initials: "?", phone: "", isPro: false, stats: { matches: 0, conversations: 0, bestScore: 0 } };
+                        state.neuron = { messages: [], inConversation: false, exchanges: 0, onboardingDone: false };
+                        state.isNewUser = true;
+                        showAuth();
+                    });
+                    actions.appendChild(cancel); actions.appendChild(submit);
+                    modal.appendChild(actions);
+                });
+            }
+
+            /* =================================================================
+   9d. CONFETTI
+================================================================= */
+            function launchConfetti() {
+                const canvas = document.getElementById("confetti-canvas");
+                canvas.style.display = "";
+                const ctx = canvas.getContext("2d");
+                const parent = canvas.parentElement;
+                const rect = parent.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                const colors = ["#ffd27a", "#ff8ab8", "#7c5ef7", "#4f6ef7", "#8be0ff", "#4fc87a"];
+                const N = 120;
+                const parts = Array.from({ length: N }, () => ({
+                    x: canvas.width / 2 + (Math.random() - 0.5) * 40,
+                    y: canvas.height / 3,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: Math.random() * -12 - 4,
+                    g: 0.35,
+                    size: 5 + Math.random() * 6,
+                    rot: Math.random() * Math.PI * 2,
+                    vr: (Math.random() - 0.5) * 0.3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 0,
+                }));
+                const start = performance.now();
+                function frame(now) {
+                    const t = now - start;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    parts.forEach((p) => {
+                        p.vy += p.g;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.rot += p.vr;
+                        p.life = t;
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(p.rot);
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = Math.max(0, 1 - t / 2800);
+                        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.5);
+                        ctx.restore();
+                    });
+                    if (t < 2800) requestAnimationFrame(frame);
+                    else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = "none"; }
+                }
+                requestAnimationFrame(frame);
+            }
+
+            /* =================================================================
    10. INIT
 ================================================================= */
             async function init() {
@@ -3221,6 +4172,8 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 initNeuronInput();
                 initMatchSearch();
                 initChatInput();
+                document.getElementById("btn-settings").addEventListener("click", openSettings);
+                document.getElementById("settings-back").addEventListener("click", settingsBack);
                 try {
                     if (!sb || !SUPABASE_URL || SUPABASE_URL.startsWith("YOUR_")) {
                         throw new Error("Supabase non configuré (URL/ANON_KEY manquants).");
