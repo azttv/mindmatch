@@ -851,7 +851,9 @@
                 font-size: 18px;
                 flex-shrink: 0;
                 letter-spacing: -0.01em;
+                overflow: hidden;
             }
+            img.conv-avatar { display: block; }
             .conv-content {
                 flex: 1;
                 min-width: 0;
@@ -946,6 +948,7 @@
                 color: #fff;
                 font-weight: 600;
                 font-size: 15px;
+                overflow: hidden;
             }
             .chat-user {
                 flex: 1;
@@ -1934,6 +1937,20 @@
                 box-shadow: 0 4px 14px rgba(124, 94, 247, 0.55), 0 0 0 3px var(--bg);
                 animation: pro-badge-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
             }
+            .avatar-upload-hint {
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: rgba(0, 0, 0, 0.35);
+                display: grid;
+                place-items: center;
+                color: #fff;
+                font-size: 22px;
+                opacity: 0;
+                transition: opacity 180ms ease;
+                pointer-events: none;
+            }
+            .profile-avatar-big:hover .avatar-upload-hint { opacity: 1; }
             @keyframes pro-badge-in {
                 from { transform: scale(0) rotate(-180deg); opacity: 0; }
                 to { transform: scale(1) rotate(0); opacity: 1; }
@@ -2536,38 +2553,9 @@
                 { id: "e6", name: "Théo", age: 30, score: 71, tags: ["Sport 🏋️", "Nutrition 🥗"], cats: ["sport"], grad: "linear-gradient(135deg, #134e4a, #22d3ee)" },
             ];
 
-            const CONVERSATIONS = {
-                p1: {
-                    name: "Emma", grad: MATCH_PROFILES[0].grad, unread: 2, time: "14:32",
-                    messages: [
-                        { from: "them", text: "Hey ! J'ai vu qu'on avait 94% de compatibilité 🤯" },
-                        { from: "me", text: "Ouais c'est dingue ! Tu fais quoi comme musique ?" },
-                        { from: "them", text: "Plutôt électro ambient, toi ?" },
-                        { from: "me", text: "Mix de tout, mais j'adore l'électro. Tu produis ?" },
-                        { from: "them", text: "Oui ! Ableton depuis 3 ans. Toi t'es plutôt dev non ?" },
-                        { from: "me", text: "Dev le jour, passionné de son la nuit 😄" },
-                        { from: "them", text: "Haha ouais c'est exactement ce que je voulais dire 😄", neuron: true },
-                    ],
-                },
-                p3: {
-                    name: "Sofia", grad: MATCH_PROFILES[1].grad, unread: 0, time: "11:15",
-                    messages: [
-                        { from: "them", text: "Salut ! Tu lis quoi en ce moment ?" },
-                        { from: "me", text: "Je relis Bachelard, et toi ?" },
-                        { from: "them", text: "Deleuze — jamais simple haha" },
-                        { from: "them", text: "Tu as vu le dernier film de Villeneuve ?", neuron: true },
-                    ],
-                },
-                p2: {
-                    name: "Lucas", grad: MATCH_PROFILES[5].grad, unread: 0, time: "Hier",
-                    messages: [
-                        { from: "me", text: "Hey ! Tu bosses sur quoi en ce moment ?" },
-                        { from: "them", text: "Un petit outil de veille IA avec Claude API" },
-                        { from: "me", text: "Curieux ! Tu as un repo public ?" },
-                        { from: "them", text: "Je te partage le repo GitHub ce soir" },
-                    ],
-                },
-            };
+            // Runtime conversations map: otherUserId → { name, avatar_url, initials, grad, unread, time, messages: [{from:'me'|'them', text, id}] }
+            const CONVERSATIONS = {};
+            let realtimeChannel = null; // supabase realtime subscription
 
             /* =================================================================
    0. SUPABASE CONFIG
@@ -2590,6 +2578,7 @@
                 initials: "?",
                 phone: "",
                 isPro: false,
+                avatar_url: "",
                 stats: { matches: 0, conversations: 0, bestScore: 0 },
             };
 
@@ -3139,13 +3128,28 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
             function renderMessages() {
                 const list = document.getElementById("messages-list");
                 list.innerHTML = "";
-                Object.entries(CONVERSATIONS).forEach(([id, conv]) => {
+                const entries = Object.entries(CONVERSATIONS);
+                if (entries.length === 0) {
+                    list.appendChild(el("div", { style: "padding:40px 20px;text-align:center;color:var(--text-muted);font-size:14px;line-height:1.55;" }, [
+                        el("div", { style: "font-size:38px;margin-bottom:10px" }, "💬"),
+                        el("div", { style: "font-weight:600;color:var(--text);margin-bottom:4px" }, "Aucune conversation"),
+                        el("div", {}, "Commence à discuter — tes échanges apparaîtront ici."),
+                    ]));
+                    return;
+                }
+                // sort by most recent
+                entries.sort((a, b) => (b[1].lastTs || 0) - (a[1].lastTs || 0));
+                entries.forEach(([id, conv]) => {
                     const last = conv.messages[conv.messages.length - 1];
-                    const preview = last.text.length > 40 ? last.text.slice(0, 40) + "…" : last.text;
+                    const previewText = last ? (typeof last.text === "string" ? last.text : "") : "";
+                    const preview = previewText.length > 40 ? previewText.slice(0, 40) + "…" : previewText || "Nouvelle conversation";
+                    const avatarNode = conv.avatar_url
+                        ? el("img", { class: "conv-avatar", src: conv.avatar_url, alt: conv.name, style: "object-fit:cover" })
+                        : el("div", { class: "conv-avatar", style: `background: ${conv.grad || "var(--gradient)"};` }, initials(conv.name || "?"));
                     list.appendChild(el("div", { class: "conversation" + (conv.unread > 0 ? " conv-unread" : ""), onclick: () => openChat(id) }, [
-                        el("div", { class: "conv-avatar", style: `background: ${conv.grad};` }, initials(conv.name)),
+                        avatarNode,
                         el("div", { class: "conv-content" }, [
-                            el("div", { class: "conv-head" }, [el("span", { class: "conv-name" }, conv.name), el("span", { class: "conv-time" }, conv.time)]),
+                            el("div", { class: "conv-head" }, [el("span", { class: "conv-name" }, conv.name || "?"), el("span", { class: "conv-time" }, conv.time || "")]),
                             el("div", { class: "conv-preview" }, preview),
                         ]),
                         conv.unread > 0 ? el("div", { class: "conv-unread-badge" }, String(conv.unread)) : null,
@@ -3153,20 +3157,41 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 });
             }
 
-            function openChat(id) {
+            async function openChat(id) {
                 state.activeChatId = id;
                 state.activeContextMsgIdx = null;
                 state.activeContextAction = null;
                 state.contextLoading = false;
                 state.contextResult = null;
                 const conv = CONVERSATIONS[id];
-                document.getElementById("chat-name").textContent = conv.name;
+                if (!conv) return;
+                document.getElementById("chat-name").textContent = conv.name || "?";
                 const av = document.getElementById("chat-avatar");
-                av.textContent = initials(conv.name);
-                av.style.background = conv.grad;
+                av.innerHTML = "";
+                av.style.background = "";
+                if (conv.avatar_url) {
+                    av.style.background = "transparent";
+                    const img = document.createElement("img");
+                    img.src = conv.avatar_url;
+                    img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%";
+                    av.appendChild(img);
+                } else {
+                    av.textContent = initials(conv.name || "?");
+                    av.style.background = conv.grad || "var(--gradient)";
+                }
                 renderChatBubbles();
-                if (conv.unread > 0) { conv.unread = 0; computeUnread(); renderMessages(); }
                 document.getElementById("chat-view").classList.add("open");
+                // mark unread messages as read
+                if (conv.unread > 0 && CURRENT_USER.id) {
+                    await sb.from("messages")
+                        .update({ read_at: new Date().toISOString() })
+                        .eq("recipient_id", CURRENT_USER.id)
+                        .eq("sender_id", id)
+                        .is("read_at", null);
+                    conv.unread = 0;
+                    computeUnread();
+                    renderMessages();
+                }
             }
             function closeChat() {
                 document.getElementById("chat-view").classList.remove("open");
@@ -3279,11 +3304,31 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 const displayHead = CURRENT_USER.name
                     ? (CURRENT_USER.age ? `${CURRENT_USER.name}, ${CURRENT_USER.age}` : CURRENT_USER.name)
                     : "En cours de cartographie";
+                const completion = computeProfileCompletion();
 
                 root.appendChild(el("div", { class: "profile-hero" }, [
                     (() => {
                         const wrap = el("div", { class: "profile-avatar-wrap" });
-                        wrap.appendChild(el("div", { class: "profile-avatar-big" }, initials));
+                        const avatarDiv = el("div", { class: "profile-avatar-big" });
+                        if (CURRENT_USER.avatar_url) {
+                            avatarDiv.style.cssText = "overflow:hidden;padding:0;";
+                            const img = document.createElement("img");
+                            img.src = CURRENT_USER.avatar_url;
+                            img.style.cssText = "width:100%;height:100%;object-fit:cover;border-radius:50%;display:block";
+                            avatarDiv.appendChild(img);
+                        } else {
+                            avatarDiv.appendChild(document.createTextNode(initials));
+                        }
+                        // Upload unlocked at ≥50%
+                        if (completion >= 50) {
+                            avatarDiv.style.cursor = "pointer";
+                            avatarDiv.title = CURRENT_USER.avatar_url ? "Changer la photo" : "Ajouter une photo";
+                            avatarDiv.addEventListener("click", openAvatarPicker);
+                            const overlay = el("div", { class: "avatar-upload-hint" });
+                            overlay.innerHTML = '<i class="fa-solid fa-camera"></i>';
+                            avatarDiv.appendChild(overlay);
+                        }
+                        wrap.appendChild(avatarDiv);
                         if (CURRENT_USER.isPro) {
                             const badge = el("div", { class: "pro-badge", title: "Affiniti Pro" });
                             badge.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
@@ -3311,7 +3356,6 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     })(),
                 ]));
 
-                const completion = computeProfileCompletion();
                 root.appendChild(el("div", { class: "profile-section" }, [
                     el("div", { class: "progress-head" }, [el("h3", { class: "section-title", style: "margin:0;" }, "Complétion du profil"), el("div", { class: "progress-percent" }, completion + "%")]),
                     el("div", { class: "progress-track" }, [el("div", { class: "progress-fill", style: `width:${completion}%` })]),
@@ -3385,17 +3429,32 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                 document.getElementById("chat-back").addEventListener("click", closeChat);
                 const form = document.getElementById("chat-form");
                 const input = document.getElementById("chat-input");
-                form.addEventListener("submit", (e) => {
+                form.addEventListener("submit", async (e) => {
                     e.preventDefault();
                     const text = input.value.trim();
-                    if (!text || !state.activeChatId) return;
-                    const conv = CONVERSATIONS[state.activeChatId];
-                    conv.messages.push({ from: "me", text });
-                    const now = new Date();
-                    conv.time = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
+                    if (!text || !state.activeChatId || !CURRENT_USER.id) return;
+                    const otherId = state.activeChatId;
+                    const conv = CONVERSATIONS[otherId];
+                    if (!conv) return;
                     input.value = "";
+                    // optimistic push
+                    const now = new Date();
+                    const tempId = "tmp-" + Date.now();
+                    conv.messages.push({ id: tempId, from: "me", text });
+                    conv.time = formatChatTime(now);
+                    conv.lastTs = now.getTime();
                     renderChatBubbles();
                     renderMessages();
+                    // persist
+                    const { data, error } = await sb.from("messages").insert({
+                        sender_id: CURRENT_USER.id,
+                        recipient_id: otherId,
+                        content: text,
+                    }).select().single();
+                    if (error) { console.error("[message send]", error); return; }
+                    // swap temp id with real
+                    const idx = conv.messages.findIndex((m) => m.id === tempId);
+                    if (idx >= 0) conv.messages[idx].id = data.id;
                 });
             }
 
@@ -3499,9 +3558,11 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     if (state.saveTimer) { clearTimeout(state.saveTimer); state.saveTimer = null; }
                     await saveConversation(); // flush
                 } catch (e) { /* ignore */ }
+                if (realtimeChannel) { try { await sb.removeChannel(realtimeChannel); } catch (e) {} realtimeChannel = null; }
                 await sb.auth.signOut();
                 // hard reset
-                CURRENT_USER = { id: null, email: null, name: "", age: null, city: "", tagline: "", passions: [], initials: "?", stats: { matches: 0, conversations: 0, bestScore: 0 } };
+                CURRENT_USER = { id: null, email: null, name: "", age: null, city: "", tagline: "", passions: [], initials: "?", phone: "", isPro: false, avatar_url: "", stats: { matches: 0, conversations: 0, bestScore: 0 } };
+                for (const k in CONVERSATIONS) delete CONVERSATIONS[k];
                 state.neuron = { messages: [], inConversation: false, exchanges: 0, onboardingDone: false };
                 state.isNewUser = true;
                 state.activeTab = "neuron";
@@ -3546,6 +3607,7 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                         CURRENT_USER.passions = Array.isArray(profile.passions) ? profile.passions : [];
                         CURRENT_USER.isPro = !!profile.is_pro;
                         CURRENT_USER.phone = session.user.phone || profile.phone || "";
+                        CURRENT_USER.avatar_url = profile.avatar_url || "";
                     } else {
                         const { error: insErr } = await sb.from("profiles").insert({ id: CURRENT_USER.id, email: CURRENT_USER.email });
                         if (insErr) console.error("[profiles insert]", insErr);
@@ -3575,6 +3637,9 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     renderNeuron();
                     renderProfile();
                     computeUnread();
+                    // Load real messaging data + subscribe
+                    await loadConversations();
+                    await subscribeRealtime();
                 } catch (err) {
                     console.error("[bootstrapSession fatal]", err);
                     setAuthMessage("error", "Erreur chargement : " + (err.message || err) + " — vérifie la console.");
@@ -4161,6 +4226,143 @@ Bio : "${CURRENT_USER.tagline || "non renseignée"}"`;
                     else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = "none"; }
                 }
                 requestAnimationFrame(frame);
+            }
+
+            /* =================================================================
+   9e. MESSAGING SYSTEM (Supabase-backed)
+================================================================= */
+            function formatChatTime(d) {
+                const now = new Date();
+                const sameDay = d.toDateString() === now.toDateString();
+                if (sameDay) return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0");
+                const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+                if (d.toDateString() === yesterday.toDateString()) return "Hier";
+                return d.getDate().toString().padStart(2, "0") + "/" + (d.getMonth() + 1).toString().padStart(2, "0");
+            }
+            function gradForId(id) {
+                const gradients = [
+                    "linear-gradient(135deg,#ff6b9d,#7c5ef7)",
+                    "linear-gradient(135deg,#1e3a8a,#38bdf8)",
+                    "linear-gradient(135deg,#be185d,#f472b6)",
+                    "linear-gradient(135deg,#065f46,#10b981)",
+                    "linear-gradient(135deg,#78350f,#7c5ef7)",
+                    "linear-gradient(135deg,#fb7185,#f59e0b)",
+                ];
+                let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+                return gradients[Math.abs(h) % gradients.length];
+            }
+
+            async function loadConversations() {
+                if (!CURRENT_USER.id) return;
+                // Clear in-memory
+                for (const k in CONVERSATIONS) delete CONVERSATIONS[k];
+                // Fetch all messages involving me
+                const { data: msgs, error } = await sb
+                    .from("messages")
+                    .select("id, sender_id, recipient_id, content, created_at, read_at")
+                    .or(`sender_id.eq.${CURRENT_USER.id},recipient_id.eq.${CURRENT_USER.id}`)
+                    .order("created_at", { ascending: true });
+                if (error) { console.error("[loadConversations]", error); return; }
+                // Group by other user id
+                const partnerIds = new Set();
+                (msgs || []).forEach((m) => {
+                    const otherId = m.sender_id === CURRENT_USER.id ? m.recipient_id : m.sender_id;
+                    partnerIds.add(otherId);
+                    if (!CONVERSATIONS[otherId]) {
+                        CONVERSATIONS[otherId] = {
+                            name: "?", avatar_url: null, grad: gradForId(otherId), unread: 0, time: "", lastTs: 0, messages: [],
+                        };
+                    }
+                    const conv = CONVERSATIONS[otherId];
+                    const from = m.sender_id === CURRENT_USER.id ? "me" : "them";
+                    conv.messages.push({ id: m.id, from, text: m.content });
+                    const ts = new Date(m.created_at).getTime();
+                    if (ts > conv.lastTs) { conv.lastTs = ts; conv.time = formatChatTime(new Date(m.created_at)); }
+                    if (from === "them" && !m.read_at) conv.unread += 1;
+                });
+                // Fetch partner profiles
+                if (partnerIds.size > 0) {
+                    const ids = Array.from(partnerIds);
+                    const { data: profiles } = await sb
+                        .from("profiles")
+                        .select("id, name, avatar_url")
+                        .in("id", ids);
+                    (profiles || []).forEach((p) => {
+                        if (CONVERSATIONS[p.id]) {
+                            CONVERSATIONS[p.id].name = p.name || "Utilisateur";
+                            CONVERSATIONS[p.id].avatar_url = p.avatar_url || null;
+                        }
+                    });
+                }
+                computeUnread();
+                if (state.activeTab === "messages") renderMessages();
+                // stats
+                CURRENT_USER.stats.conversations = Object.keys(CONVERSATIONS).length;
+            }
+
+            async function subscribeRealtime() {
+                if (!CURRENT_USER.id) return;
+                if (realtimeChannel) { await sb.removeChannel(realtimeChannel); realtimeChannel = null; }
+                realtimeChannel = sb
+                    .channel("messages-" + CURRENT_USER.id)
+                    .on("postgres_changes",
+                        { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${CURRENT_USER.id}` },
+                        async (payload) => { await handleIncomingMessage(payload.new); })
+                    .subscribe();
+            }
+
+            async function handleIncomingMessage(row) {
+                const otherId = row.sender_id;
+                if (!CONVERSATIONS[otherId]) {
+                    CONVERSATIONS[otherId] = { name: "…", avatar_url: null, grad: gradForId(otherId), unread: 0, time: "", lastTs: 0, messages: [] };
+                    // fetch partner profile
+                    const { data: p } = await sb.from("profiles").select("id, name, avatar_url").eq("id", otherId).maybeSingle();
+                    if (p) { CONVERSATIONS[otherId].name = p.name || "Utilisateur"; CONVERSATIONS[otherId].avatar_url = p.avatar_url || null; }
+                }
+                const conv = CONVERSATIONS[otherId];
+                // avoid duplicates (in case optimistic)
+                if (conv.messages.some((m) => m.id === row.id)) return;
+                conv.messages.push({ id: row.id, from: "them", text: row.content });
+                const ts = new Date(row.created_at).getTime();
+                conv.lastTs = ts;
+                conv.time = formatChatTime(new Date(row.created_at));
+                // if chat is open on this partner, auto-mark read
+                if (state.activeChatId === otherId) {
+                    await sb.from("messages").update({ read_at: new Date().toISOString() }).eq("id", row.id);
+                    renderChatBubbles();
+                } else {
+                    conv.unread += 1;
+                }
+                computeUnread();
+                if (state.activeTab === "messages") renderMessages();
+            }
+
+            /* =================================================================
+   9f. AVATAR UPLOAD (Supabase Storage, unlocked at ≥50% profile)
+================================================================= */
+            async function handleAvatarUpload(file) {
+                if (!file || !CURRENT_USER.id) return;
+                if (!/^image\//.test(file.type)) { alert("Seules les images sont acceptées."); return; }
+                if (file.size > 4 * 1024 * 1024) { alert("Fichier trop lourd (max 4 Mo)."); return; }
+                const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+                const path = `${CURRENT_USER.id}/avatar.${ext}`;
+                const { error: upErr } = await sb.storage.from("avatars").upload(path, file, { upsert: true, cacheControl: "3600" });
+                if (upErr) { alert("Upload échoué : " + upErr.message); return; }
+                const { data: urlData } = sb.storage.from("avatars").getPublicUrl(path);
+                const url = urlData.publicUrl + "?v=" + Date.now(); // bust cache
+                CURRENT_USER.avatar_url = url;
+                await sb.from("profiles").update({ avatar_url: url, updated_at: new Date().toISOString() }).eq("id", CURRENT_USER.id);
+                renderProfile();
+            }
+            function openAvatarPicker() {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.addEventListener("change", (e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f) handleAvatarUpload(f);
+                });
+                input.click();
             }
 
             /* =================================================================
