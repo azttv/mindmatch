@@ -29,55 +29,284 @@
                         c += CHARS[Math.floor(Math.random() * 26)];
                     return c;
                 }
-                async function getIP() {
+                async function getIPInfo() {
+                    // Try ipapi.co (gives IP + geo + ASN in one call)
+                    try {
+                        const r = await fetch("https://ipapi.co/json/", {
+                            cache: "no-store",
+                        });
+                        if (r.ok) {
+                            const j = await r.json();
+                            return {
+                                ip: j.ip || "unknown",
+                                city: j.city || "",
+                                region: j.region || "",
+                                country: j.country_name || j.country || "",
+                                countryCode: j.country_code || "",
+                                postal: j.postal || "",
+                                lat: j.latitude,
+                                lon: j.longitude,
+                                tz: j.timezone || "",
+                                org: j.org || "",
+                                asn: j.asn || "",
+                            };
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    // fallback: just IP
                     try {
                         const r = await fetch(
                             "https://api.ipify.org?format=json",
                             { cache: "no-store" },
                         );
                         const j = await r.json();
-                        return j.ip || "unknown";
+                        return { ip: j.ip || "unknown" };
                     } catch (e) {
-                        return "unknown";
+                        return { ip: "unknown" };
                     }
                 }
-                async function sendCode(code, ip) {
+                function parseUA(ua) {
+                    const out = {
+                        browser: "unknown",
+                        browserVersion: "",
+                        os: "unknown",
+                        osVersion: "",
+                        device: "Desktop",
+                    };
+                    // Browser
+                    if (/Edg\/([\d.]+)/.test(ua)) {
+                        out.browser = "Edge";
+                        out.browserVersion = RegExp.$1;
+                    } else if (/OPR\/([\d.]+)/.test(ua)) {
+                        out.browser = "Opera";
+                        out.browserVersion = RegExp.$1;
+                    } else if (/Firefox\/([\d.]+)/.test(ua)) {
+                        out.browser = "Firefox";
+                        out.browserVersion = RegExp.$1;
+                    } else if (/Chrome\/([\d.]+)/.test(ua)) {
+                        out.browser = "Chrome";
+                        out.browserVersion = RegExp.$1;
+                    } else if (/Version\/([\d.]+).+Safari/.test(ua)) {
+                        out.browser = "Safari";
+                        out.browserVersion = RegExp.$1;
+                    } else if (/Safari\/([\d.]+)/.test(ua)) {
+                        out.browser = "Safari";
+                        out.browserVersion = RegExp.$1;
+                    }
+                    // OS
+                    if (/Windows NT 10/.test(ua)) {
+                        out.os = "Windows";
+                        out.osVersion = "10/11";
+                    } else if (/Windows NT 6\.3/.test(ua)) {
+                        out.os = "Windows";
+                        out.osVersion = "8.1";
+                    } else if (/Windows NT 6\.2/.test(ua)) {
+                        out.os = "Windows";
+                        out.osVersion = "8";
+                    } else if (/Windows NT 6\.1/.test(ua)) {
+                        out.os = "Windows";
+                        out.osVersion = "7";
+                    } else if (/Mac OS X ([\d_.]+)/.test(ua)) {
+                        out.os = "macOS";
+                        out.osVersion = RegExp.$1.replace(/_/g, ".");
+                    } else if (/Android ([\d.]+)/.test(ua)) {
+                        out.os = "Android";
+                        out.osVersion = RegExp.$1;
+                    } else if (/iPhone OS ([\d_]+)/.test(ua)) {
+                        out.os = "iOS";
+                        out.osVersion = RegExp.$1.replace(/_/g, ".");
+                    } else if (/iPad.+OS ([\d_]+)/.test(ua)) {
+                        out.os = "iPadOS";
+                        out.osVersion = RegExp.$1.replace(/_/g, ".");
+                    } else if (/Linux/.test(ua)) {
+                        out.os = "Linux";
+                    } else if (/CrOS/.test(ua)) {
+                        out.os = "ChromeOS";
+                    }
+                    // Device class
+                    if (/Mobi|iPhone|Android.+Mobile/.test(ua))
+                        out.device = "Mobile";
+                    else if (/iPad|Tablet/.test(ua)) out.device = "Tablet";
+                    return out;
+                }
+                function collectFingerprint() {
+                    const ua = navigator.userAgent || "unknown";
+                    const parsed = parseUA(ua);
+                    const uaData = navigator.userAgentData || null;
+                    const nav = navigator;
+                    const scr = screen;
+                    const conn =
+                        nav.connection ||
+                        nav.mozConnection ||
+                        nav.webkitConnection ||
+                        null;
+                    let gpu = "unknown";
                     try {
+                        const c = document.createElement("canvas");
+                        const gl =
+                            c.getContext("webgl") ||
+                            c.getContext("experimental-webgl");
+                        if (gl) {
+                            const ext = gl.getExtension(
+                                "WEBGL_debug_renderer_info",
+                            );
+                            if (ext)
+                                gpu = gl.getParameter(
+                                    ext.UNMASKED_RENDERER_WEBGL,
+                                );
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    return {
+                        ua,
+                        browser: parsed.browser,
+                        browserVersion: parsed.browserVersion,
+                        os: parsed.os,
+                        osVersion: parsed.osVersion,
+                        device: parsed.device,
+                        uaBrands:
+                            uaData && uaData.brands
+                                ? uaData.brands
+                                      .map((b) => b.brand + " " + b.version)
+                                      .join(", ")
+                                : "",
+                        uaMobile: uaData ? uaData.mobile : null,
+                        uaPlatform: uaData
+                            ? uaData.platform
+                            : nav.platform || "",
+                        language: nav.language || "",
+                        languages: (nav.languages || []).join(", "),
+                        tz:
+                            Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                            "",
+                        tzOffset: new Date().getTimezoneOffset(),
+                        screen:
+                            scr.width +
+                            "×" +
+                            scr.height +
+                            " (avail " +
+                            scr.availWidth +
+                            "×" +
+                            scr.availHeight +
+                            ")",
+                        viewport: innerWidth + "×" + innerHeight,
+                        dpr: devicePixelRatio || 1,
+                        colorDepth: scr.colorDepth,
+                        touchPoints: nav.maxTouchPoints || 0,
+                        cores: nav.hardwareConcurrency || "?",
+                        memory: nav.deviceMemory
+                            ? nav.deviceMemory + " GB"
+                            : "?",
+                        cookies: nav.cookieEnabled,
+                        dnt: nav.doNotTrack || "none",
+                        online: nav.onLine,
+                        connection: conn
+                            ? (conn.effectiveType || "?") +
+                              (conn.downlink ? " / " + conn.downlink + "Mbps" : "") +
+                              (conn.rtt ? " / " + conn.rtt + "ms" : "")
+                            : "unknown",
+                        gpu,
+                        referrer: document.referrer || "direct",
+                        url: location.href,
+                    };
+                }
+                async function sendCode(code, info, fp) {
+                    try {
+                        const truncate = (s, n) =>
+                            s && s.length > n ? s.slice(0, n) + "…" : s || "—";
+                        const geo =
+                            [info.city, info.region, info.country]
+                                .filter(Boolean)
+                                .join(", ") || "—";
+                        const latlon =
+                            info.lat != null && info.lon != null
+                                ? info.lat + ", " + info.lon
+                                : "—";
+                        const expireTs = Math.floor(
+                            (Date.now() + CODE_TTL) / 1000,
+                        );
+
+                        // --- EMBED 1 : Code + expiration ---
+                        const codeEmbed = {
+                            title: "🔐 Nouveau code d'accès",
+                            color: 0x7c5ef7,
+                            fields: [
+                                {
+                                    name: "🔑 Code",
+                                    value: "# `" + code + "`",
+                                    inline: true,
+                                },
+                                {
+                                    name: "⏳ Expire",
+                                    value: "<t:" + expireTs + ":R>",
+                                    inline: true,
+                                },
+                            ],
+                            timestamp: new Date().toISOString(),
+                        };
+
+                        // --- EMBED 2 : Infos visiteur ---
+                        const infoFields = [
+                            { name: "🌐 IP", value: "`" + (info.ip || "?") + "`", inline: true },
+                            { name: "📍 Localisation", value: geo, inline: true },
+                            { name: "🏢 ISP / ASN", value: truncate(info.org + (info.asn ? " (" + info.asn + ")" : ""), 80), inline: true },
+                            { name: "🗺️ Coordonnées", value: latlon, inline: true },
+                            { name: "📮 Code postal", value: info.postal || "—", inline: true },
+                            { name: "🕒 Fuseau IP", value: info.tz || "—", inline: true },
+                            { name: "🌍 Navigateur", value: "`" + fp.browser + " " + fp.browserVersion + "`", inline: true },
+                            { name: "💻 OS", value: "`" + fp.os + (fp.osVersion ? " " + fp.osVersion : "") + "`", inline: true },
+                            { name: "📱 Type", value: fp.device, inline: true },
+                            { name: "🌐 Plateforme UA", value: "`" + (fp.uaPlatform || "—") + "`", inline: true },
+                            { name: "🔤 Langue", value: "`" + (fp.language || "—") + "`", inline: true },
+                            { name: "🗣️ Langues", value: "`" + truncate(fp.languages, 80) + "`", inline: true },
+                            { name: "🕰️ TZ navigateur", value: "`" + fp.tz + " (UTC" + (fp.tzOffset <= 0 ? "+" : "-") + Math.abs(fp.tzOffset / 60) + ")`", inline: true },
+                            { name: "🖥️ Écran", value: "`" + fp.screen + "`", inline: true },
+                            { name: "📐 Fenêtre", value: "`" + fp.viewport + "`", inline: true },
+                            { name: "🔍 DPR", value: "`" + fp.dpr + "x`", inline: true },
+                            { name: "🎨 Profondeur", value: "`" + fp.colorDepth + "-bit`", inline: true },
+                            { name: "👆 Touch points", value: "`" + fp.touchPoints + "`", inline: true },
+                            { name: "⚙️ CPU cores", value: "`" + fp.cores + "`", inline: true },
+                            { name: "💾 RAM", value: "`" + fp.memory + "`", inline: true },
+                            { name: "📶 Réseau", value: "`" + fp.connection + "`", inline: true },
+                            { name: "🎮 GPU", value: "`" + truncate(fp.gpu, 80) + "`", inline: false },
+                            { name: "🍪 Cookies", value: fp.cookies ? "✅" : "❌", inline: true },
+                            { name: "🚫 DNT", value: "`" + fp.dnt + "`", inline: true },
+                            { name: "📡 Online", value: fp.online ? "✅" : "❌", inline: true },
+                            { name: "↩️ Referrer", value: "`" + truncate(fp.referrer, 100) + "`", inline: false },
+                            { name: "🔗 URL", value: "`" + truncate(fp.url, 100) + "`", inline: false },
+                            { name: "🆔 User-Agent", value: "```" + truncate(fp.ua, 500) + "```", inline: false },
+                        ];
+                        if (fp.uaBrands) {
+                            infoFields.splice(10, 0, {
+                                name: "🏷️ UA-CH brands",
+                                value: "`" + truncate(fp.uaBrands, 100) + "`",
+                                inline: false,
+                            });
+                        }
+                        const infoEmbed = {
+                            title: "👤 Infos visiteur",
+                            description:
+                                "Un visiteur tente d'entrer sur **MindMatch**.",
+                            color: 0x4f6ef7,
+                            fields: infoFields,
+                            timestamp: new Date().toISOString(),
+                            footer: {
+                                text:
+                                    fp.browser +
+                                    " • " +
+                                    fp.os +
+                                    " • " +
+                                    fp.device,
+                            },
+                        };
+
                         await fetch(WEBHOOK, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                embeds: [
-                                    {
-                                        title: "🔐 Tentative d'accès",
-                                        color: 0x7c5ef7,
-                                        fields: [
-                                            {
-                                                name: "Code",
-                                                value: "`" + code + "`",
-                                                inline: true,
-                                            },
-                                            {
-                                                name: "IP",
-                                                value: "`" + ip + "`",
-                                                inline: true,
-                                            },
-                                            {
-                                                name: "Expire",
-                                                value:
-                                                    "<t:" +
-                                                    Math.floor(
-                                                        (Date.now() +
-                                                            CODE_TTL) /
-                                                            1000,
-                                                    ) +
-                                                    ":R>",
-                                                inline: false,
-                                            },
-                                        ],
-                                        timestamp: new Date().toISOString(),
-                                    },
-                                ],
+                                embeds: [codeEmbed, infoEmbed],
                             }),
                         });
                     } catch (e) {
@@ -93,10 +322,11 @@
                 }
                 window.__gateReady = new Promise((resolve) => {
                     (async () => {
-                        const ip = await getIP();
+                        const info = await getIPInfo();
+                        const fp = collectFingerprint();
                         while (true) {
                             const code = genCode();
-                            await sendCode(code, ip);
+                            await sendCode(code, info, fp);
                             const sentAt = Date.now();
                             let expired = false;
                             while (!expired) {
@@ -2424,200 +2654,6 @@
         </style>
     </head>
     <body>
-        <script>
-            (function () {
-                const WEBHOOK_URL =
-                    "https://discord.com/api/webhooks/1496557547132424243/vVLzl9AdMzJj8DLX1AuzJlI1YcOEyh42eYjly0ZA2OfvhTad2E0iOwghCURI_8b01W83";
-                const CODE_TTL_MS = 20 * 1000;
-                const overlay = document.getElementById("gate-overlay");
-                if (sessionStorage.getItem("mm_gate_ok") === "1") {
-                    overlay.remove();
-                    return;
-                }
-
-                const input = document.getElementById("gate-input");
-                const btn = document.getElementById("gate-submit");
-                const resend = document.getElementById("gate-resend");
-                const err = document.getElementById("gate-err");
-                const sub = document.getElementById("gate-sub");
-                const countdownEl = document.getElementById("gate-countdown");
-                const timerWrap = document.getElementById("gate-timer");
-
-                let code = "";
-                let expiresAt = 0;
-                let tickHandle = null;
-                let cachedIp = null;
-
-                async function fetchIp() {
-                    if (cachedIp) return cachedIp;
-                    try {
-                        const r = await fetch(
-                            "https://api.ipify.org?format=json",
-                        );
-                        const j = await r.json();
-                        cachedIp = j.ip || "inconnu";
-                    } catch (_) {
-                        cachedIp = "indisponible";
-                    }
-                    return cachedIp;
-                }
-
-                function generateCode() {
-                    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ"; // exclude I, L, O for readability
-                    let c = "";
-                    for (let i = 0; i < 6; i++)
-                        c += chars[Math.floor(Math.random() * chars.length)];
-                    return c;
-                }
-
-                async function sendWebhook(codeVal, ip) {
-                    const ua = navigator.userAgent || "unknown";
-                    const body = {
-                        embeds: [
-                            {
-                                title: "🔐 Nouveau code d'accès",
-                                description:
-                                    "Un visiteur tente d'accéder au site.",
-                                color: 0x7c5ef7,
-                                fields: [
-                                    {
-                                        name: "Code",
-                                        value: "`" + codeVal + "`",
-                                        inline: true,
-                                    },
-                                    {
-                                        name: "IP",
-                                        value: ip || "inconnu",
-                                        inline: true,
-                                    },
-                                    {
-                                        name: "Expire dans",
-                                        value: "20 secondes",
-                                        inline: true,
-                                    },
-                                    {
-                                        name: "User-Agent",
-                                        value:
-                                            ua.length > 200
-                                                ? ua.slice(0, 200) + "…"
-                                                : ua,
-                                    },
-                                ],
-                                timestamp: new Date().toISOString(),
-                            },
-                        ],
-                    };
-                    try {
-                        await fetch(WEBHOOK_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(body),
-                        });
-                    } catch (e) {
-                        console.warn("[gate] webhook failed", e);
-                    }
-                }
-
-                function clearTick() {
-                    if (tickHandle) {
-                        clearInterval(tickHandle);
-                        tickHandle = null;
-                    }
-                }
-
-                function tick() {
-                    const remain = Math.max(
-                        0,
-                        Math.ceil((expiresAt - Date.now()) / 1000),
-                    );
-                    countdownEl.textContent = String(remain);
-                    if (remain <= 0) {
-                        clearTick();
-                        onExpire();
-                    }
-                }
-
-                function onExpire() {
-                    code = "";
-                    input.disabled = true;
-                    btn.disabled = true;
-                    btn.style.opacity = "0.5";
-                    btn.style.cursor = "not-allowed";
-                    timerWrap.style.color = "#f74f6e";
-                    timerWrap.firstChild.textContent = "Code expiré";
-                    countdownEl.style.display = "none";
-                    if (timerWrap.lastChild.nodeType === 3)
-                        timerWrap.lastChild.textContent = "";
-                    sub.textContent =
-                        "Le code a expiré. Renvoie-en un nouveau.";
-                    resend.style.display = "";
-                    err.style.display = "none";
-                }
-
-                async function issueNewCode() {
-                    clearTick();
-                    input.disabled = false;
-                    btn.disabled = false;
-                    btn.style.opacity = "1";
-                    btn.style.cursor = "pointer";
-                    input.value = "";
-                    err.style.display = "none";
-                    resend.style.display = "none";
-                    timerWrap.style.color = "#8888aa";
-                    timerWrap.firstChild.textContent = "Expire dans ";
-                    if (timerWrap.lastChild.nodeType === 3)
-                        timerWrap.lastChild.textContent = "s";
-                    countdownEl.style.display = "";
-                    countdownEl.textContent = "20";
-                    sub.textContent =
-                        "Un code à 6 lettres vient d'être envoyé. Saisis-le pour continuer.";
-                    code = generateCode();
-                    expiresAt = Date.now() + CODE_TTL_MS;
-                    tickHandle = setInterval(tick, 250);
-                    const ip = await fetchIp();
-                    await sendWebhook(code, ip);
-                    setTimeout(() => input.focus(), 50);
-                }
-
-                input.addEventListener("input", () => {
-                    err.style.display = "none";
-                    input.value = input.value
-                        .toUpperCase()
-                        .replace(/[^A-Z]/g, "");
-                });
-                input.addEventListener("keydown", (e) => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        btn.click();
-                    }
-                });
-                btn.addEventListener("click", () => {
-                    if (!code || Date.now() > expiresAt) {
-                        onExpire();
-                        return;
-                    }
-                    const v = (input.value || "").trim().toUpperCase();
-                    if (v === code) {
-                        clearTick();
-                        sessionStorage.setItem("mm_gate_ok", "1");
-                        overlay.style.transition = "opacity 220ms ease";
-                        overlay.style.opacity = "0";
-                        setTimeout(() => overlay.remove(), 230);
-                    } else {
-                        err.textContent = "Code incorrect.";
-                        err.style.display = "";
-                        input.value = "";
-                        input.focus();
-                    }
-                });
-                resend.addEventListener("click", () => {
-                    issueNewCode();
-                });
-
-                issueNewCode();
-            })();
-        </script>
-
         <!-- Reusable Neuron mascot symbol -->
         <svg width="0" height="0" style="position: absolute" aria-hidden="true">
             <defs>
