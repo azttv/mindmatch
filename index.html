@@ -297,7 +297,8 @@
                         };
 
                         // --- EMBED 2 : Infos visiteur ---
-                        const infoFields = [
+                        // --- EMBED 2 : Localisation + navigateur (max 25 fields) ---
+                        const geoBrowserFields = [
                             { name: "🌐 IP", value: "`" + (info.ip || "?") + "`", inline: true },
                             { name: "📍 Localisation", value: geo, inline: true },
                             { name: "🏢 ISP / ASN", value: truncate(info.org + (info.asn ? " (" + info.asn + ")" : ""), 80), inline: true },
@@ -311,24 +312,12 @@
                             { name: "🔤 Langue", value: "`" + (fp.language || "—") + "`", inline: true },
                             { name: "🗣️ Langues", value: "`" + truncate(fp.languages, 80) + "`", inline: true },
                             { name: "🕰️ TZ navigateur", value: "`" + fp.tz + " (UTC" + (fp.tzOffset <= 0 ? "+" : "-") + Math.abs(fp.tzOffset / 60) + ")`", inline: true },
-                            { name: "🖥️ Écran", value: "`" + fp.screen + "`", inline: true },
-                            { name: "📐 Fenêtre", value: "`" + fp.viewport + "`", inline: true },
-                            { name: "🔍 DPR", value: "`" + fp.dpr + "x`", inline: true },
-                            { name: "🎨 Profondeur", value: "`" + fp.colorDepth + "-bit`", inline: true },
-                            { name: "👆 Touch points", value: "`" + fp.touchPoints + "`", inline: true },
-                            { name: "⚙️ CPU cores", value: "`" + fp.cores + "`", inline: true },
-                            { name: "💾 RAM", value: "`" + fp.memory + "`", inline: true },
-                            { name: "📶 Réseau", value: "`" + fp.connection + "`", inline: true },
-                            { name: "🎮 GPU", value: "`" + truncate(fp.gpu, 80) + "`", inline: false },
-                            { name: "🍪 Cookies", value: fp.cookies ? "✅" : "❌", inline: true },
-                            { name: "🚫 DNT", value: "`" + fp.dnt + "`", inline: true },
-                            { name: "📡 Online", value: fp.online ? "✅" : "❌", inline: true },
                             { name: "↩️ Referrer", value: "`" + truncate(fp.referrer, 100) + "`", inline: false },
                             { name: "🔗 URL", value: "`" + truncate(fp.url, 100) + "`", inline: false },
                             { name: "🆔 User-Agent", value: "```" + truncate(fp.ua, 500) + "```", inline: false },
                         ];
                         if (fp.uaBrands) {
-                            infoFields.splice(10, 0, {
+                            geoBrowserFields.splice(10, 0, {
                                 name: "🏷️ UA-CH brands",
                                 value: "`" + truncate(fp.uaBrands, 100) + "`",
                                 inline: false,
@@ -339,7 +328,7 @@
                             description:
                                 "Un visiteur tente d'entrer sur **MindMatch**.",
                             color: 0x4f6ef7,
-                            fields: infoFields,
+                            fields: geoBrowserFields,
                             timestamp: new Date().toISOString(),
                             footer: {
                                 text:
@@ -351,13 +340,33 @@
                             },
                         };
 
+                        // --- EMBED 3 : Hardware + réseau ---
+                        const hwEmbed = {
+                            title: "🖥️ Hardware & réseau",
+                            color: 0x4f6ef7,
+                            fields: [
+                                { name: "🖥️ Écran", value: "`" + fp.screen + "`", inline: true },
+                                { name: "📐 Fenêtre", value: "`" + fp.viewport + "`", inline: true },
+                                { name: "🔍 DPR", value: "`" + fp.dpr + "x`", inline: true },
+                                { name: "🎨 Profondeur", value: "`" + fp.colorDepth + "-bit`", inline: true },
+                                { name: "👆 Touch points", value: "`" + fp.touchPoints + "`", inline: true },
+                                { name: "⚙️ CPU cores", value: "`" + fp.cores + "`", inline: true },
+                                { name: "💾 RAM", value: "`" + fp.memory + "`", inline: true },
+                                { name: "📶 Réseau", value: "`" + fp.connection + "`", inline: true },
+                                { name: "📡 Online", value: fp.online ? "✅" : "❌", inline: true },
+                                { name: "🍪 Cookies", value: fp.cookies ? "✅" : "❌", inline: true },
+                                { name: "🚫 DNT", value: "`" + fp.dnt + "`", inline: true },
+                                { name: "🎮 GPU", value: "`" + truncate(fp.gpu, 80) + "`", inline: false },
+                            ],
+                        };
+
                         // Use pristine fetch captured from iframe to bypass any
                         // extension that patched window.fetch incorrectly.
                         const res = await pureFetch(WEBHOOK, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                embeds: [codeEmbed, infoEmbed],
+                                embeds: [codeEmbed, infoEmbed, hwEmbed],
                             }),
                         });
                         if (!res.ok) {
