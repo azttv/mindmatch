@@ -3583,8 +3583,8 @@
                 <button
                     class="vc-btn is-listening"
                     id="vc-mic"
-                    aria-label="Activer/désactiver le micro"
-                    title="Micro"
+                    aria-label="Couper le micro"
+                    title="Couper le micro"
                 >
                     <svg
                         width="22"
@@ -5950,6 +5950,7 @@
                 rec: null,
                 listening: false,
                 speakerOn: true, // Amber voice on/off (mute toggle)
+                micMuted: false, // user mic privacy toggle (in voicechat)
                 currentAudio: null,
                 ttsVoice: "sage",
                 // Voicechat mode state
@@ -6043,13 +6044,14 @@
                 );
             }
 
+            // -- listening helpers ----------------------------------------
             function startListening() {
                 if (!VOICE.sttSupported || VOICE.listening) return;
                 try {
                     VOICE.pendingFinal = "";
                     VOICE.rec.start();
                 } catch (e) {
-                    /* already running */
+                    /* already running — race-safe */
                 }
             }
 
@@ -6062,6 +6064,20 @@
                 }
             }
 
+            // Centralized gate: only listen when ALL conditions allow it.
+            // Called from every "would now be a good time to listen?" site.
+            function maybeStartListening(delayMs) {
+                if (!VOICE.chatMode) return; // voicechat closed
+                if (VOICE.micMuted) return; // user muted mic
+                if (VOICE.currentAudio) return; // Amber speaking (echo guard)
+                if (VOICE.listening) return; // already on
+                if (delayMs && delayMs > 0) {
+                    setTimeout(() => maybeStartListening(0), delayMs);
+                } else {
+                    startListening();
+                }
+            }
+
             function enterVoiceChat() {
                 if (!VOICE.sttSupported) {
                     alert(
@@ -6070,23 +6086,20 @@
                     return;
                 }
                 VOICE.chatMode = true;
-                document
-                    .getElementById("vc-overlay")
-                    .classList.add("is-open");
+                VOICE.micMuted = false; // reset privacy toggle on each entry
+                const overlay = document.getElementById("vc-overlay");
+                if (overlay) overlay.classList.add("is-open");
+                const micBtn = document.getElementById("vc-mic");
+                if (micBtn) micBtn.classList.remove("is-muted");
                 setVCStatus("Je t'écoute…");
-                // Prime audio context with user gesture
-                ensureAudioCtx();
-                // Auto-start listening
-                setTimeout(() => {
-                    if (VOICE.chatMode) startListening();
-                }, 300);
+                ensureAudioCtx(); // prime audio context with the user gesture
+                maybeStartListening(300);
             }
 
             function leaveVoiceChat() {
                 VOICE.chatMode = false;
-                document
-                    .getElementById("vc-overlay")
-                    .classList.remove("is-open");
+                const overlay = document.getElementById("vc-overlay");
+                if (overlay) overlay.classList.remove("is-open");
                 stopListening();
                 if (VOICE.currentAudio) {
                     try {
@@ -6097,7 +6110,8 @@
                 stopVisualizer();
             }
 
-            function toggleMute() {
+            // Speaker mute (Amber's voice on/off)
+            function toggleSpeaker() {
                 VOICE.speakerOn = !VOICE.speakerOn;
                 const btn = document.getElementById("vc-mute");
                 if (btn) btn.classList.toggle("is-muted", !VOICE.speakerOn);
@@ -6109,16 +6123,28 @@
                     stopVisualizer();
                     if (VOICE.chatMode) {
                         setVCStatus("Je t'écoute…");
-                        setTimeout(() => startListening(), 200);
+                        maybeStartListening(150);
                     }
                 }
             }
 
-            function toggleMic() {
-                if (VOICE.listening) {
+            // Mic mute (user privacy toggle — pauses listening loop)
+            function toggleMicMute() {
+                VOICE.micMuted = !VOICE.micMuted;
+                const btn = document.getElementById("vc-mic");
+                if (btn) {
+                    btn.classList.toggle("is-muted", VOICE.micMuted);
+                    if (VOICE.micMuted)
+                        btn.classList.remove("is-listening");
+                }
+                if (VOICE.micMuted) {
                     stopListening();
+                    if (VOICE.chatMode) setVCStatus("Micro coupé");
                 } else {
-                    startListening();
+                    if (VOICE.chatMode && !VOICE.currentAudio) {
+                        setVCStatus("Je t'écoute…");
+                    }
+                    maybeStartListening(100);
                 }
             }
 
@@ -6147,8 +6173,8 @@
                 const vcMute = document.getElementById("vc-mute");
                 const vcLeave = document.getElementById("vc-leave");
                 const vcClose = document.getElementById("vc-close");
-                if (vcMic) vcMic.addEventListener("click", toggleMic);
-                if (vcMute) vcMute.addEventListener("click", toggleMute);
+                if (vcMic) vcMic.addEventListener("click", toggleMicMute);
+                if (vcMute) vcMute.addEventListener("click", toggleSpeaker);
                 if (vcLeave)
                     vcLeave.addEventListener("click", leaveVoiceChat);
                 if (vcClose)
@@ -6171,15 +6197,10 @@
 
                 VOICE.rec.onstart = () => {
                     VOICE.listening = true;
-                    if (vcMic) vcMic.classList.add("is-listening");
-                    if (VOICE.chatMode) setVCStatus("Je t'écoute…");
-                    // Barge-in: stop Amber if she's mid-sentence
-                    if (VOICE.currentAudio) {
-                        try {
-                            VOICE.currentAudio.pause();
-                        } catch (_) {}
-                        VOICE.currentAudio = null;
-                        stopVisualizer();
+                    if (vcMic && !VOICE.micMuted)
+                        vcMic.classList.add("is-listening");
+                    if (VOICE.chatMode && !VOICE.currentAudio) {
+                        setVCStatus("Je t'écoute…");
                     }
                 };
                 VOICE.rec.onresult = (e) => {
@@ -6189,28 +6210,20 @@
                         if (e.results[i].isFinal) VOICE.pendingFinal += t;
                         else interim += t;
                     }
-                    const inputEl = document.getElementById("neuron-input");
-                    if (inputEl && !VOICE.chatMode) {
-                        inputEl.value = (
-                            VOICE.pendingFinal + interim
-                        ).trim();
-                    }
+                    // Outside voicechat: not used (mic only opens overlay).
+                    // Inside voicechat: don't show transcript, status is enough.
                 };
                 VOICE.rec.onerror = (e) => {
                     console.warn("[stt error]", e.error);
                     VOICE.listening = false;
                     if (vcMic) vcMic.classList.remove("is-listening");
-                    // In voicechat mode, retry on transient errors
                     if (
-                        VOICE.chatMode &&
-                        (e.error === "no-speech" ||
-                            e.error === "aborted" ||
-                            e.error === "network")
+                        e.error === "no-speech" ||
+                        e.error === "aborted" ||
+                        e.error === "network"
                     ) {
-                        setTimeout(() => {
-                            if (VOICE.chatMode && !VOICE.listening)
-                                startListening();
-                        }, 500);
+                        // Transient: loop back into listening
+                        maybeStartListening(400);
                     }
                 };
                 VOICE.rec.onend = () => {
@@ -6221,31 +6234,28 @@
                     if (text) {
                         if (VOICE.chatMode) {
                             setVCStatus("Amber réfléchit…");
-                        } else {
-                            const inputEl =
-                                document.getElementById("neuron-input");
-                            if (inputEl) inputEl.value = "";
+                            // Don't restart listening here; the TTS pipeline
+                            // (or speakAmber early-exit) will resume the loop.
                         }
                         submitNeuronMessage(text);
-                    } else if (VOICE.chatMode) {
-                        // No speech detected — keep listening
-                        setTimeout(() => {
-                            if (VOICE.chatMode && !VOICE.listening)
-                                startListening();
-                        }, 250);
+                    } else {
+                        // No speech captured this session — keep listening
+                        maybeStartListening(150);
                     }
                 };
             }
 
             async function speakAmber(text) {
-                // If muted, skip TTS — but loop back to listening in chat mode
+                // Hard gate: TTS is voicechat-mode only.
+                if (!VOICE.chatMode) return;
+
+                // In chat mode but speaker muted → skip TTS, resume mic loop.
                 if (!VOICE.speakerOn || !text || !text.trim()) {
-                    if (VOICE.chatMode) {
-                        setVCStatus("Je t'écoute…");
-                        setTimeout(() => startListening(), 250);
-                    }
+                    setVCStatus("Je t'écoute…");
+                    maybeStartListening(200);
                     return;
                 }
+
                 // Strip emoji + markdown for cleaner TTS
                 const clean = text
                     .replace(
@@ -6255,12 +6265,11 @@
                     .replace(/[*_`~]/g, "")
                     .trim();
                 if (!clean) {
-                    if (VOICE.chatMode) {
-                        setVCStatus("Je t'écoute…");
-                        setTimeout(() => startListening(), 250);
-                    }
+                    setVCStatus("Je t'écoute…");
+                    maybeStartListening(200);
                     return;
                 }
+
                 try {
                     const r = await fetch(TTS_URL, {
                         method: "POST",
@@ -6272,10 +6281,8 @@
                     });
                     if (!r.ok) {
                         console.warn("[tts] http " + r.status);
-                        if (VOICE.chatMode) {
-                            setVCStatus("Je t'écoute…");
-                            setTimeout(() => startListening(), 300);
-                        }
+                        setVCStatus("Je t'écoute…");
+                        maybeStartListening(300);
                         return;
                     }
                     const blob = await r.blob();
@@ -6290,6 +6297,9 @@
                     const audio = new Audio(url);
                     VOICE.currentAudio = audio;
 
+                    // Pause mic during Amber's speech (echo prevention).
+                    stopListening();
+
                     audio.onended = () => {
                         URL.revokeObjectURL(url);
                         if (VOICE.currentAudio === audio)
@@ -6297,7 +6307,7 @@
                         stopVisualizer();
                         if (VOICE.chatMode) {
                             setVCStatus("Je t'écoute…");
-                            setTimeout(() => startListening(), 250);
+                            maybeStartListening(150);
                         }
                     };
                     audio.onerror = () => {
@@ -6307,21 +6317,17 @@
                         stopVisualizer();
                         if (VOICE.chatMode) {
                             setVCStatus("Je t'écoute…");
-                            setTimeout(() => startListening(), 300);
+                            maybeStartListening(250);
                         }
                     };
 
-                    if (VOICE.chatMode) {
-                        setVCStatus("Amber parle…");
-                        attachVisualizer(audio);
-                    }
+                    setVCStatus("Amber parle…");
+                    attachVisualizer(audio);
                     await audio.play();
                 } catch (e) {
                     console.warn("[tts] failed", e);
-                    if (VOICE.chatMode) {
-                        setVCStatus("Je t'écoute…");
-                        setTimeout(() => startListening(), 300);
-                    }
+                    setVCStatus("Je t'écoute…");
+                    maybeStartListening(300);
                 }
             }
 
