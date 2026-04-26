@@ -6276,6 +6276,8 @@
                 listening: false,
                 speakerOn: true, // Amber voice on/off (mute toggle)
                 micMuted: false, // user mic privacy toggle (in voicechat)
+                netErrCount: 0, // consecutive STT "network" errors
+                sttBlocked: false, // hard-stop after N network errors
                 currentAudio: null,
                 ttsVoice: "sage",
                 // Voicechat mode state
@@ -6397,6 +6399,7 @@
             // -- listening helpers ----------------------------------------
             function startListening() {
                 if (!VOICE.sttSupported || VOICE.listening) return;
+                if (VOICE.sttBlocked) return; // hard-stopped
                 try {
                     VOICE.pendingFinal = "";
                     VOICE.rec.start();
@@ -6421,6 +6424,7 @@
                 if (VOICE.micMuted) return; // user muted mic
                 if (VOICE.currentAudio) return; // Amber speaking (echo guard)
                 if (VOICE.listening) return; // already on
+                if (VOICE.sttBlocked) return; // STT permanently failed
                 if (delayMs && delayMs > 0) {
                     setTimeout(() => maybeStartListening(0), delayMs);
                 } else {
@@ -6436,7 +6440,29 @@
                     );
                     return;
                 }
-                dbgLog("system", "▶ enterVoiceChat");
+                // HTTPS preflight — Web Speech API needs HTTPS in production.
+                const isHttps = location.protocol === "https:";
+                const isLocal =
+                    location.hostname === "localhost" ||
+                    location.hostname === "127.0.0.1" ||
+                    location.hostname === "";
+                if (!isHttps && !isLocal) {
+                    dbgLog("error", "Page not HTTPS — STT will fail", {
+                        protocol: location.protocol,
+                        host: location.host,
+                    });
+                    alert(
+                        "La reconnaissance vocale a besoin de HTTPS. Sers la page depuis https:// (pas file:// ni http://).",
+                    );
+                    return;
+                }
+                dbgLog("system", "▶ enterVoiceChat", {
+                    protocol: location.protocol,
+                    ua: navigator.userAgent.slice(0, 80),
+                });
+                // Reset block state on each entry — give it a fresh shot.
+                VOICE.sttBlocked = false;
+                VOICE.netErrCount = 0;
                 VOICE.chatMode = true;
                 VOICE.micMuted = false; // reset privacy toggle on each entry
                 VOICE.speakerOn = true; // ensure TTS is on
@@ -6537,6 +6563,8 @@
                     dbgLog("stt", "▶ start (lang=" + VOICE.rec.lang + ")");
                 };
                 VOICE.rec.onresult = (e) => {
+                    // Got data → network is fine, reset counter.
+                    VOICE.netErrCount = 0;
                     let interim = "";
                     let gotFinal = false;
                     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -6567,13 +6595,40 @@
                     VOICE.listening = false;
                     if (vcMic) vcMic.classList.remove("is-listening");
                     dbgLog("error", "✗ stt error: " + e.error);
-                    if (
-                        e.error === "no-speech" ||
-                        e.error === "aborted" ||
-                        e.error === "network"
-                    ) {
-                        // Transient: loop back into listening
+
+                    // "network" = browser can't reach Google STT servers.
+                    // Not transient — needs HTTPS, no Brave/blocker, etc.
+                    if (e.error === "network") {
+                        VOICE.netErrCount += 1;
+                        if (VOICE.netErrCount >= 3) {
+                            VOICE.sttBlocked = true;
+                            dbgLog(
+                                "error",
+                                "STT blocked — stopping retry loop",
+                                {
+                                    hint: "Web Speech API needs HTTPS + Google STT reachable. Try Chrome on HTTPS, switch from Brave, or disable VPN.",
+                                    protocol: location.protocol,
+                                    host: location.host,
+                                },
+                            );
+                            if (VOICE.chatMode) {
+                                setVCStatus(
+                                    "Reconnaissance vocale bloquée — voir debug",
+                                );
+                            }
+                            return;
+                        }
+                        // Up to 2 retries with growing backoff
+                        maybeStartListening(800 * VOICE.netErrCount);
+                        return;
+                    }
+
+                    // Transient errors: loop back into listening
+                    if (e.error === "no-speech" || e.error === "aborted") {
                         maybeStartListening(400);
+                    } else {
+                        // Unknown error — log and back off, don't hammer
+                        maybeStartListening(1200);
                     }
                 };
                 VOICE.rec.onend = () => {
