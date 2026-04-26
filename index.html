@@ -3306,7 +3306,7 @@
             }
 
             /* =====================================================
-               VOICE MODE — mic button + voicechat overlay + visualizer
+               VOICE MODE — orb-style fullscreen overlay
             ===================================================== */
             .neuron-mic {
                 width: 38px;
@@ -3330,7 +3330,7 @@
                 pointer-events: none;
             }
 
-            /* === VOICECHAT FULLSCREEN OVERLAY === */
+            /* === FULLSCREEN OVERLAY === */
             .vc-overlay {
                 position: fixed;
                 inset: 0;
@@ -3338,162 +3338,263 @@
                 display: none;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
-                padding: 40px 24px;
+                justify-content: space-between;
+                padding: 56px 24px 64px;
                 background: radial-gradient(
-                    ellipse at center,
-                    #1c1530 0%,
-                    #0a0612 55%,
-                    #050308 100%
+                    ellipse 80% 60% at 50% 35%,
+                    #2a1845 0%,
+                    #150a25 45%,
+                    #07040d 100%
                 );
-                -webkit-backdrop-filter: blur(20px);
-                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(24px);
+                backdrop-filter: blur(24px);
+                overflow: hidden;
             }
             .vc-overlay.is-open {
                 display: flex;
-                animation: vc-fadein 0.32s ease-out;
+                animation: vc-fadein 0.42s ease-out;
             }
             @keyframes vc-fadein {
                 from {
                     opacity: 0;
-                    transform: scale(0.96);
                 }
                 to {
                     opacity: 1;
-                    transform: scale(1);
                 }
             }
 
-            .vc-close {
+            /* Soft ambient color wash that drifts behind the orb */
+            .vc-overlay::before {
+                content: "";
                 position: absolute;
-                top: 16px;
-                right: 16px;
-                width: 38px;
-                height: 38px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: #fff;
-                display: grid;
-                place-items: center;
-                cursor: pointer;
-                transition: background 0.18s ease;
-            }
-            .vc-close:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
-
-            .vc-stage {
-                position: relative;
-                width: min(64vw, 280px);
-                aspect-ratio: 1;
-                display: grid;
-                place-items: center;
-                margin-bottom: 38px;
-            }
-
-            .vc-circle {
-                position: absolute;
-                inset: 18%;
-                border-radius: 50%;
-                background: radial-gradient(
-                    circle at 30% 30%,
-                    rgba(255, 200, 215, 0.95) 0%,
-                    rgba(230, 110, 160, 0.7) 38%,
-                    rgba(160, 50, 130, 0.5) 70%,
-                    rgba(80, 20, 80, 0) 100%
-                );
-                transform: scale(1);
-                transition: transform 0.08s ease-out;
-                box-shadow:
-                    0 0 60px 10px rgba(255, 100, 150, 0.35),
-                    0 0 130px 30px rgba(180, 60, 160, 0.18);
-                will-change: transform;
-            }
-
-            .vc-ring {
-                position: absolute;
-                border-radius: 50%;
-                border: 1.5px solid rgba(255, 180, 200, 0.18);
-                transform: scale(1);
-                transition: transform 0.1s ease-out;
+                inset: -30%;
+                background:
+                    radial-gradient(
+                        circle at 30% 20%,
+                        rgba(255, 90, 170, 0.18),
+                        transparent 50%
+                    ),
+                    radial-gradient(
+                        circle at 75% 80%,
+                        rgba(120, 60, 220, 0.15),
+                        transparent 55%
+                    );
+                animation: vc-drift 18s ease-in-out infinite alternate;
                 pointer-events: none;
-                will-change: transform;
+                z-index: 0;
             }
-            .vc-ring.r1 {
-                inset: 6%;
-                border-color: rgba(255, 180, 200, 0.22);
-            }
-            .vc-ring.r2 {
-                inset: -6%;
-                border-color: rgba(255, 180, 200, 0.12);
-            }
-            .vc-ring.r3 {
-                inset: -18%;
-                border-color: rgba(255, 180, 200, 0.07);
+            @keyframes vc-drift {
+                from {
+                    transform: translate(0, 0) scale(1);
+                }
+                to {
+                    transform: translate(4%, -3%) scale(1.05);
+                }
             }
 
             .vc-status {
-                color: #f0e8f2;
+                position: relative;
+                z-index: 2;
+                color: rgba(245, 235, 250, 0.92);
                 font-size: 15px;
                 font-weight: 500;
-                letter-spacing: 0.3px;
-                margin-bottom: 28px;
+                letter-spacing: 0.4px;
                 text-align: center;
                 min-height: 22px;
-                opacity: 0.9;
+                margin-top: 8px;
                 font-family: inherit;
             }
 
+            /* === ORB === */
+            .vc-stage {
+                position: relative;
+                z-index: 1;
+                width: min(72vw, 320px);
+                aspect-ratio: 1;
+                display: grid;
+                place-items: center;
+                margin: auto 0;
+            }
+
+            .vc-orb {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                display: grid;
+                place-items: center;
+                animation: vc-breathe 4.2s ease-in-out infinite;
+                will-change: transform;
+            }
+            @keyframes vc-breathe {
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.04);
+                }
+            }
+
+            /* Outermost soft halo — biggest reaction to audio */
+            .vc-orb-aura {
+                position: absolute;
+                inset: -10%;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle at 50% 50%,
+                    rgba(255, 100, 175, 0.55) 0%,
+                    rgba(190, 60, 200, 0.28) 40%,
+                    rgba(80, 30, 140, 0) 75%
+                );
+                filter: blur(28px);
+                transform: scale(1);
+                transition: transform 0.09s ease-out;
+                will-change: transform;
+                pointer-events: none;
+            }
+
+            /* Mid glow ring — adds depth */
+            .vc-orb-glow {
+                position: absolute;
+                inset: 8%;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle at 50% 55%,
+                    rgba(255, 150, 200, 0.85) 0%,
+                    rgba(220, 80, 170, 0.55) 35%,
+                    rgba(120, 40, 160, 0.2) 70%,
+                    rgba(60, 20, 100, 0) 100%
+                );
+                filter: blur(8px);
+                transform: scale(1);
+                transition: transform 0.08s ease-out;
+                will-change: transform;
+                pointer-events: none;
+            }
+
+            /* Solid orb body */
+            .vc-orb-core {
+                position: relative;
+                width: 62%;
+                height: 62%;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle at 32% 28%,
+                    rgba(255, 235, 245, 1) 0%,
+                    rgba(255, 165, 205, 0.95) 22%,
+                    rgba(225, 95, 175, 0.85) 50%,
+                    rgba(150, 50, 145, 0.7) 78%,
+                    rgba(70, 25, 95, 0.6) 100%
+                );
+                box-shadow:
+                    inset 0 -20px 40px rgba(80, 30, 110, 0.55),
+                    inset 18px 18px 50px rgba(255, 220, 235, 0.35),
+                    0 0 60px 4px rgba(255, 110, 180, 0.45);
+                transform: scale(1);
+                transition: transform 0.07s ease-out;
+                will-change: transform;
+            }
+
+            /* Highlight reflection on the core */
+            .vc-orb-core::before {
+                content: "";
+                position: absolute;
+                top: 12%;
+                left: 18%;
+                width: 38%;
+                height: 28%;
+                border-radius: 50%;
+                background: radial-gradient(
+                    ellipse,
+                    rgba(255, 255, 255, 0.55) 0%,
+                    rgba(255, 255, 255, 0) 70%
+                );
+                pointer-events: none;
+                filter: blur(2px);
+            }
+
+            /* Subtle moving shimmer */
+            .vc-orb-core::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: conic-gradient(
+                    from 0deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.06) 25%,
+                    rgba(255, 255, 255, 0) 50%,
+                    rgba(255, 255, 255, 0.04) 75%,
+                    rgba(255, 255, 255, 0) 100%
+                );
+                animation: vc-shimmer 9s linear infinite;
+                mix-blend-mode: screen;
+                pointer-events: none;
+            }
+            @keyframes vc-shimmer {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* === CONTROLS === */
             .vc-controls {
+                position: relative;
+                z-index: 2;
                 display: flex;
-                gap: 22px;
+                gap: 28px;
                 align-items: center;
+                justify-content: center;
             }
 
             .vc-btn {
-                width: 60px;
-                height: 60px;
+                width: 64px;
+                height: 64px;
                 border-radius: 50%;
-                border: 1px solid rgba(255, 255, 255, 0.14);
+                border: 1px solid rgba(255, 255, 255, 0.16);
                 background: rgba(255, 255, 255, 0.06);
+                -webkit-backdrop-filter: blur(8px);
+                backdrop-filter: blur(8px);
                 color: #fff;
                 display: grid;
                 place-items: center;
                 cursor: pointer;
-                transition: transform 0.15s ease, background 0.18s ease,
-                    border-color 0.18s ease, color 0.18s ease;
+                transition:
+                    transform 0.15s ease,
+                    background 0.18s ease,
+                    border-color 0.18s ease;
                 position: relative;
             }
             .vc-btn:hover {
                 transform: scale(1.06);
                 background: rgba(255, 255, 255, 0.1);
             }
-            .vc-btn.is-listening {
-                background: #ff3a5e;
-                border-color: #ff3a5e;
-                color: #fff;
-                animation: vc-pulse 1.1s ease-in-out infinite;
+            .vc-btn:active {
+                transform: scale(0.97);
             }
             .vc-btn.is-muted {
-                background: rgba(255, 255, 255, 0.04);
-                color: rgba(255, 255, 255, 0.4);
-                border-color: rgba(255, 255, 255, 0.08);
+                background: rgba(255, 80, 110, 0.18);
+                border-color: rgba(255, 80, 110, 0.45);
+                color: #ff8aa3;
             }
             .vc-btn.is-muted::after {
                 content: "";
                 position: absolute;
-                left: 14px;
-                right: 14px;
+                left: 16px;
+                right: 16px;
                 top: 50%;
-                height: 2px;
-                background: rgba(255, 255, 255, 0.55);
+                height: 2.4px;
+                background: #ff8aa3;
                 transform: rotate(-45deg);
                 border-radius: 2px;
             }
+
             .vc-btn-leave {
-                width: 60px;
-                height: 60px;
+                width: 64px;
+                height: 64px;
                 border-radius: 50%;
                 background: #ff3a5e;
                 color: #fff;
@@ -3501,26 +3602,34 @@
                 display: grid;
                 place-items: center;
                 cursor: pointer;
-                transition: transform 0.15s ease, background 0.18s ease;
+                transition:
+                    transform 0.15s ease,
+                    background 0.18s ease;
+                box-shadow: 0 6px 20px rgba(255, 58, 94, 0.35);
             }
             .vc-btn-leave:hover {
                 transform: scale(1.06);
                 background: #ff5273;
             }
-            @keyframes vc-pulse {
-                0%,
-                100% {
-                    box-shadow: 0 0 0 0 rgba(255, 58, 94, 0.55);
-                }
-                50% {
-                    box-shadow: 0 0 0 14px rgba(255, 58, 94, 0);
-                }
+            .vc-btn-leave:active {
+                transform: scale(0.97);
             }
-
+            .vc-btn-label {
+                margin-top: 8px;
+                font-size: 11px;
+                color: rgba(245, 235, 250, 0.55);
+                text-align: center;
+                letter-spacing: 0.4px;
+                font-family: inherit;
+            }
+            .vc-control-stack {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
         </style>
     </head>
     <body>
-
         <!-- ====================================================
              VOICECHAT FULLSCREEN OVERLAY
         ==================================================== -->
@@ -3530,100 +3639,68 @@
             role="dialog"
             aria-label="Mode conversation vocale"
         >
-            <button class="vc-close" id="vc-close" aria-label="Fermer">
-                <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-            </button>
-
-            <div class="vc-stage">
-                <div class="vc-ring r3" id="vc-ring3"></div>
-                <div class="vc-ring r2" id="vc-ring2"></div>
-                <div class="vc-ring r1" id="vc-ring1"></div>
-                <div class="vc-circle" id="vc-circle"></div>
-            </div>
-
             <div class="vc-status" id="vc-status">Connexion…</div>
 
+            <div class="vc-stage">
+                <div class="vc-orb" id="vc-orb">
+                    <div class="vc-orb-aura" id="vc-orb-aura"></div>
+                    <div class="vc-orb-glow" id="vc-orb-glow"></div>
+                    <div class="vc-orb-core" id="vc-orb-core"></div>
+                </div>
+            </div>
+
             <div class="vc-controls">
-                <button
-                    class="vc-btn"
-                    id="vc-mute"
-                    aria-label="Couper le son d'Amber"
-                    title="Mute"
-                >
-                    <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                <div class="vc-control-stack">
+                    <button
+                        class="vc-btn"
+                        id="vc-mic"
+                        aria-label="Couper le micro"
+                        title="Couper le micro"
                     >
-                        <polygon
-                            points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
-                        />
-                        <path
-                            d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"
-                        />
-                    </svg>
-                </button>
-                <button
-                    class="vc-btn is-listening"
-                    id="vc-mic"
-                    aria-label="Couper le micro"
-                    title="Couper le micro"
-                >
-                    <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                        <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect x="9" y="2" width="6" height="12" rx="3" />
+                            <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
+                            <line x1="12" y1="21" x2="12" y2="17" />
+                        </svg>
+                    </button>
+                    <span class="vc-btn-label" id="vc-mic-label">Micro</span>
+                </div>
+
+                <div class="vc-control-stack">
+                    <button
+                        class="vc-btn-leave"
+                        id="vc-leave"
+                        aria-label="Quitter le mode vocal"
+                        title="Quitter"
                     >
-                        <rect x="9" y="2" width="6" height="12" rx="3" />
-                        <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
-                        <line x1="12" y1="21" x2="12" y2="17" />
-                    </svg>
-                </button>
-                <button
-                    class="vc-btn-leave"
-                    id="vc-leave"
-                    aria-label="Quitter le mode vocal"
-                    title="Quitter"
-                >
-                    <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.4"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <path
-                            d="M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"
-                        />
-                        <polyline points="16 17 21 12 16 7" />
-                        <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                </button>
+                        <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.4"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"
+                            />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                    </button>
+                    <span class="vc-btn-label">Quitter</span>
+                </div>
             </div>
         </div>
 
@@ -4057,7 +4134,13 @@
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                             >
-                                <rect x="9" y="2" width="6" height="12" rx="3" />
+                                <rect
+                                    x="9"
+                                    y="2"
+                                    width="6"
+                                    height="12"
+                                    rx="3"
+                                />
                                 <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
                                 <line x1="12" y1="21" x2="12" y2="17" />
                             </svg>
@@ -4647,7 +4730,7 @@
                             "Tu es Amber, compagnon conversationnel de MindMatch. " +
                             "Brève, chaleureuse, taquine. Réponds en français." +
                             "[CONTEXTE] Utilisateur : {{USER_LINE}} | " +
-                            "Passions : {{PASSIONS}} | Bio : \"{{BIO}}\"";
+                            'Passions : {{PASSIONS}} | Bio : "{{BIO}}"';
                         return SYSTEM_PROMPT_TEMPLATE;
                     } finally {
                         SYSTEM_PROMPT_PROMISE = null;
@@ -4892,7 +4975,10 @@
                     role: m.from === "user" ? "user" : "assistant",
                     content: Array.isArray(m.text) ? m.text.join(" ") : m.text,
                 }));
-                const reply = await callGPT(gptMessages, await neuronSystemPrompt());
+                const reply = await callGPT(
+                    gptMessages,
+                    await neuronSystemPrompt(),
+                );
 
                 hideNeuronTyping();
                 setBrandNeuronState("is-thinking", false);
@@ -6005,27 +6091,51 @@
 
             function runVisualizerLoop() {
                 if (!VOICE.analyser) return;
-                const data = new Uint8Array(
-                    VOICE.analyser.frequencyBinCount,
-                );
-                const circle = document.getElementById("vc-circle");
-                const r1 = document.getElementById("vc-ring1");
-                const r2 = document.getElementById("vc-ring2");
-                const r3 = document.getElementById("vc-ring3");
+                const data = new Uint8Array(VOICE.analyser.frequencyBinCount);
+                const orbCore = document.getElementById("vc-orb-core");
+                const orbGlow = document.getElementById("vc-orb-glow");
+                const orbAura = document.getElementById("vc-orb-aura");
+                // Smoothed energy values (cheap one-pole low-pass)
+                let smoothBass = 0;
+                let smoothMid = 0;
+                let smoothAvg = 0;
                 function tick() {
                     VOICE.analyser.getByteFrequencyData(data);
-                    let sum = 0;
-                    for (let i = 0; i < data.length; i++) sum += data[i];
-                    const avg = sum / data.length / 255; // 0-1
-                    const s = 1 + avg * 0.55;
-                    if (circle)
-                        circle.style.transform = `scale(${s.toFixed(3)})`;
-                    if (r1)
-                        r1.style.transform = `scale(${(1 + avg * 0.3).toFixed(3)})`;
-                    if (r2)
-                        r2.style.transform = `scale(${(1 + avg * 0.42).toFixed(3)})`;
-                    if (r3)
-                        r3.style.transform = `scale(${(1 + avg * 0.55).toFixed(3)})`;
+                    const n = data.length;
+                    // Split into bass (low 25%), mid (next 35%), full average
+                    const bassEnd = Math.floor(n * 0.25);
+                    const midEnd = Math.floor(n * 0.6);
+                    let bassSum = 0,
+                        midSum = 0,
+                        sum = 0;
+                    for (let i = 0; i < n; i++) {
+                        sum += data[i];
+                        if (i < bassEnd) bassSum += data[i];
+                        else if (i < midEnd) midSum += data[i];
+                    }
+                    const bass = bassSum / bassEnd / 255 || 0;
+                    const mid = midSum / (midEnd - bassEnd) / 255 || 0;
+                    const avg = sum / n / 255 || 0;
+                    // Smooth (more responsive on rise, slower decay feel)
+                    smoothBass = smoothBass * 0.55 + bass * 0.45;
+                    smoothMid = smoothMid * 0.55 + mid * 0.45;
+                    smoothAvg = smoothAvg * 0.55 + avg * 0.45;
+                    if (orbCore) {
+                        const s = 1 + smoothAvg * 0.42;
+                        orbCore.style.transform = `scale(${s.toFixed(3)})`;
+                    }
+                    if (orbGlow) {
+                        const s = 1 + smoothMid * 0.55;
+                        orbGlow.style.transform = `scale(${s.toFixed(3)})`;
+                    }
+                    if (orbAura) {
+                        const s = 1 + smoothBass * 0.7;
+                        orbAura.style.opacity = (
+                            0.7 +
+                            smoothBass * 0.3
+                        ).toFixed(3);
+                        orbAura.style.transform = `scale(${s.toFixed(3)})`;
+                    }
                     VOICE.rafId = requestAnimationFrame(tick);
                 }
                 tick();
@@ -6036,12 +6146,13 @@
                     cancelAnimationFrame(VOICE.rafId);
                     VOICE.rafId = null;
                 }
-                ["vc-circle", "vc-ring1", "vc-ring2", "vc-ring3"].forEach(
-                    (id) => {
-                        const el = document.getElementById(id);
-                        if (el) el.style.transform = "scale(1)";
-                    },
-                );
+                ["vc-orb-core", "vc-orb-glow", "vc-orb-aura"].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.style.transform = "scale(1)";
+                        el.style.opacity = "";
+                    }
+                });
             }
 
             // -- listening helpers ----------------------------------------
@@ -6087,10 +6198,13 @@
                 }
                 VOICE.chatMode = true;
                 VOICE.micMuted = false; // reset privacy toggle on each entry
+                VOICE.speakerOn = true; // ensure TTS is on
                 const overlay = document.getElementById("vc-overlay");
                 if (overlay) overlay.classList.add("is-open");
                 const micBtn = document.getElementById("vc-mic");
                 if (micBtn) micBtn.classList.remove("is-muted");
+                const micLbl = document.getElementById("vc-mic-label");
+                if (micLbl) micLbl.textContent = "Micro";
                 setVCStatus("Je t'écoute…");
                 ensureAudioCtx(); // prime audio context with the user gesture
                 maybeStartListening(300);
@@ -6110,33 +6224,16 @@
                 stopVisualizer();
             }
 
-            // Speaker mute (Amber's voice on/off)
-            function toggleSpeaker() {
-                VOICE.speakerOn = !VOICE.speakerOn;
-                const btn = document.getElementById("vc-mute");
-                if (btn) btn.classList.toggle("is-muted", !VOICE.speakerOn);
-                if (!VOICE.speakerOn && VOICE.currentAudio) {
-                    try {
-                        VOICE.currentAudio.pause();
-                    } catch (_) {}
-                    VOICE.currentAudio = null;
-                    stopVisualizer();
-                    if (VOICE.chatMode) {
-                        setVCStatus("Je t'écoute…");
-                        maybeStartListening(150);
-                    }
-                }
-            }
-
             // Mic mute (user privacy toggle — pauses listening loop)
             function toggleMicMute() {
                 VOICE.micMuted = !VOICE.micMuted;
                 const btn = document.getElementById("vc-mic");
+                const lbl = document.getElementById("vc-mic-label");
                 if (btn) {
                     btn.classList.toggle("is-muted", VOICE.micMuted);
-                    if (VOICE.micMuted)
-                        btn.classList.remove("is-listening");
+                    if (VOICE.micMuted) btn.classList.remove("is-listening");
                 }
+                if (lbl) lbl.textContent = VOICE.micMuted ? "Coupé" : "Micro";
                 if (VOICE.micMuted) {
                     stopListening();
                     if (VOICE.chatMode) setVCStatus("Micro coupé");
@@ -6150,8 +6247,7 @@
 
             function initVoice() {
                 const SR =
-                    window.SpeechRecognition ||
-                    window.webkitSpeechRecognition;
+                    window.SpeechRecognition || window.webkitSpeechRecognition;
                 VOICE.sttSupported = !!SR;
                 const micBtn = document.getElementById("neuron-mic");
 
@@ -6170,15 +6266,9 @@
 
                 // --- Voicechat overlay buttons ---
                 const vcMic = document.getElementById("vc-mic");
-                const vcMute = document.getElementById("vc-mute");
                 const vcLeave = document.getElementById("vc-leave");
-                const vcClose = document.getElementById("vc-close");
                 if (vcMic) vcMic.addEventListener("click", toggleMicMute);
-                if (vcMute) vcMute.addEventListener("click", toggleSpeaker);
-                if (vcLeave)
-                    vcLeave.addEventListener("click", leaveVoiceChat);
-                if (vcClose)
-                    vcClose.addEventListener("click", leaveVoiceChat);
+                if (vcLeave) vcLeave.addEventListener("click", leaveVoiceChat);
 
                 // ESC to leave
                 document.addEventListener("keydown", (e) => {
@@ -6258,10 +6348,7 @@
 
                 // Strip emoji + markdown for cleaner TTS
                 const clean = text
-                    .replace(
-                        /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,
-                        "",
-                    )
+                    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
                     .replace(/[*_`~]/g, "")
                     .trim();
                 if (!clean) {
