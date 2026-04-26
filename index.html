@@ -6272,12 +6272,26 @@
 
             const VOICE = {
                 sttSupported: false,
-                rec: null,
-                listening: false,
+                rec: null, // legacy (unused — kept for dbg state row)
+                listening: false, // legacy (unused)
                 speakerOn: true, // Amber voice on/off (mute toggle)
                 micMuted: false, // user mic privacy toggle (in voicechat)
-                netErrCount: 0, // consecutive STT "network" errors
-                sttBlocked: false, // hard-stop after N network errors
+                netErrCount: 0, // legacy
+                sttBlocked: false, // legacy
+                // Whisper pipeline state
+                mediaStream: null,
+                recorder: null,
+                recordedChunks: [],
+                vadAnalyser: null,
+                vadInterval: null,
+                speechDetected: false,
+                silenceStart: 0,
+                utteranceStart: 0,
+                // VAD tunables
+                vadThreshold: 0.025, // RMS threshold for "speaking"
+                vadSilenceMs: 1100, // ms of silence ends utterance
+                minUtteranceMs: 400, // shorter = ignored
+                maxUtteranceMs: 15000, // safety cutoff
                 currentAudio: null,
                 ttsVoice: "sage",
                 // Voicechat mode state
@@ -6396,63 +6410,312 @@
                 });
             }
 
-            // -- listening helpers ----------------------------------------
-            function startListening() {
-                if (!VOICE.sttSupported || VOICE.listening) return;
-                if (VOICE.sttBlocked) return; // hard-stopped
+            // =========================================================
+            // STT PIPELINE — MediaRecorder → /stt (OpenAI Whisper)
+            // Replaces Web Speech API. Works on Firefox too. No Google.
+            // =========================================================
+            const STT_URL = WORKER_URL.replace(/\/$/, "") + "/stt";
+
+            // Compatibility no-ops (older code paths still call these).
+            function startListening() {}
+            function stopListening() {}
+            function maybeStartListening() {}
+
+            function pickRecorderMime() {
+                const candidates = [
+                    "audio/webm;codecs=opus",
+                    "audio/webm",
+                    "audio/mp4",
+                    "audio/mp4;codecs=mp4a",
+                    "audio/ogg;codecs=opus",
+                ];
+                for (const m of candidates) {
+                    if (
+                        window.MediaRecorder &&
+                        MediaRecorder.isTypeSupported(m)
+                    )
+                        return m;
+                }
+                return "";
+            }
+
+            async function startMicPipeline() {
+                if (VOICE.mediaStream) return true;
+                if (
+                    !navigator.mediaDevices ||
+                    !navigator.mediaDevices.getUserMedia ||
+                    !window.MediaRecorder
+                ) {
+                    dbgLog("error", "MediaRecorder/getUserMedia not supported");
+                    if (VOICE.chatMode) setVCStatus("Navigateur non supporté");
+                    return false;
+                }
                 try {
-                    VOICE.pendingFinal = "";
-                    VOICE.rec.start();
-                } catch (e) {
-                    /* already running — race-safe */
-                }
-            }
-
-            function stopListening() {
-                if (!VOICE.sttSupported) return;
-                try {
-                    VOICE.rec.stop();
-                } catch (e) {
-                    /* not running */
-                }
-            }
-
-            // Centralized gate: only listen when ALL conditions allow it.
-            // Called from every "would now be a good time to listen?" site.
-            function maybeStartListening(delayMs) {
-                if (!VOICE.chatMode) return; // voicechat closed
-                if (VOICE.micMuted) return; // user muted mic
-                if (VOICE.currentAudio) return; // Amber speaking (echo guard)
-                if (VOICE.listening) return; // already on
-                if (VOICE.sttBlocked) return; // STT permanently failed
-                if (delayMs && delayMs > 0) {
-                    setTimeout(() => maybeStartListening(0), delayMs);
-                } else {
-                    startListening();
-                }
-            }
-
-            function enterVoiceChat() {
-                if (!VOICE.sttSupported) {
-                    dbgLog("error", "STT not supported");
-                    alert(
-                        "Ton navigateur ne supporte pas la reconnaissance vocale. Essaie Chrome, Edge ou Safari.",
+                    VOICE.mediaStream =
+                        await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                            },
+                        });
+                } catch (err) {
+                    dbgLog(
+                        "error",
+                        "getUserMedia failed",
+                        err.name + ": " + err.message,
                     );
+                    if (VOICE.chatMode)
+                        setVCStatus("Micro bloqué — autorise-le");
+                    return false;
+                }
+
+                // Wire VAD analyser
+                const ctx = ensureAudioCtx();
+                if (!ctx) {
+                    dbgLog("error", "no AudioContext for VAD");
+                    return false;
+                }
+                try {
+                    const src = ctx.createMediaStreamSource(VOICE.mediaStream);
+                    const a = ctx.createAnalyser();
+                    a.fftSize = 512;
+                    a.smoothingTimeConstant = 0.5;
+                    src.connect(a);
+                    VOICE.vadAnalyser = a;
+                } catch (err) {
+                    dbgLog("error", "VAD wiring failed", err.message);
+                    return false;
+                }
+
+                // Wire MediaRecorder
+                const mime = pickRecorderMime();
+                try {
+                    VOICE.recorder = new MediaRecorder(
+                        VOICE.mediaStream,
+                        mime ? { mimeType: mime } : {},
+                    );
+                } catch (err) {
+                    dbgLog("error", "MediaRecorder ctor failed", err.message);
+                    return false;
+                }
+                VOICE.recordedChunks = [];
+                VOICE.recorder.ondataavailable = (e) => {
+                    if (!e.data || e.data.size === 0) return;
+                    if (VOICE.speechDetected) {
+                        VOICE.recordedChunks.push(e.data);
+                    }
+                    // Chunks before speech are simply ignored.
+                };
+                VOICE.recorder.onerror = (e) => {
+                    dbgLog("error", "recorder error", String(e.error || e));
+                };
+                VOICE.recorder.start(150); // chunk every 150ms
+                dbgLog("system", "▶ mic pipeline", {
+                    mime: mime || "(default)",
+                });
+
+                // Mic button visual: pulsing red while listening
+                const vcMic = document.getElementById("vc-mic");
+                if (vcMic && !VOICE.micMuted)
+                    vcMic.classList.add("is-listening");
+
+                startVADLoop();
+                return true;
+            }
+
+            function startVADLoop() {
+                if (VOICE.vadInterval) clearInterval(VOICE.vadInterval);
+                VOICE.speechDetected = false;
+                VOICE.silenceStart = 0;
+                VOICE.utteranceStart = 0;
+                const data = new Uint8Array(VOICE.vadAnalyser.fftSize);
+                VOICE.vadInterval = setInterval(() => {
+                    if (!VOICE.vadAnalyser || !VOICE.recorder) return;
+                    if (VOICE.recorder.state !== "recording") return;
+                    if (VOICE.micMuted) return;
+                    if (!VOICE.chatMode) return;
+
+                    VOICE.vadAnalyser.getByteTimeDomainData(data);
+                    let sum = 0;
+                    for (let i = 0; i < data.length; i++) {
+                        const v = (data[i] - 128) / 128;
+                        sum += v * v;
+                    }
+                    const rms = Math.sqrt(sum / data.length);
+                    const now = Date.now();
+                    const speaking = rms > VOICE.vadThreshold;
+
+                    // Barge-in: user starts talking while Amber speaks.
+                    if (
+                        speaking &&
+                        VOICE.currentAudio &&
+                        !VOICE.speechDetected
+                    ) {
+                        try {
+                            VOICE.currentAudio.pause();
+                        } catch (_) {}
+                        VOICE.currentAudio = null;
+                        stopVisualizer();
+                        dbgLog("stt", "▶ barge-in");
+                    }
+
+                    // Don't start a new utterance while Amber is still speaking.
+                    if (VOICE.currentAudio) return;
+
+                    if (speaking) {
+                        if (!VOICE.speechDetected) {
+                            VOICE.speechDetected = true;
+                            VOICE.utteranceStart = now;
+                            VOICE.recordedChunks = []; // fresh segment
+                            if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                            dbgLog("stt", "▶ speech detected", {
+                                rms: rms.toFixed(3),
+                            });
+                        }
+                        VOICE.silenceStart = 0;
+                    } else if (VOICE.speechDetected) {
+                        if (!VOICE.silenceStart) VOICE.silenceStart = now;
+                        const silentFor = now - VOICE.silenceStart;
+                        if (silentFor >= VOICE.vadSilenceMs) {
+                            const dur = now - VOICE.utteranceStart;
+                            if (dur >= VOICE.minUtteranceMs) {
+                                finalizeUtterance();
+                            } else {
+                                dbgLog("stt", "✗ too short, drop", {
+                                    ms: dur,
+                                });
+                                VOICE.speechDetected = false;
+                                VOICE.silenceStart = 0;
+                                VOICE.recordedChunks = [];
+                            }
+                        }
+                    }
+
+                    // Safety cutoff
+                    if (
+                        VOICE.speechDetected &&
+                        VOICE.utteranceStart &&
+                        now - VOICE.utteranceStart > VOICE.maxUtteranceMs
+                    ) {
+                        dbgLog("stt", "■ max length, finalize");
+                        finalizeUtterance();
+                    }
+                }, 60);
+            }
+
+            async function finalizeUtterance() {
+                if (!VOICE.recorder) return;
+                VOICE.speechDetected = false;
+                VOICE.silenceStart = 0;
+                if (VOICE.chatMode) setVCStatus("Amber réfléchit…");
+
+                // Force the recorder to flush its current buffer as a chunk.
+                // requestData() emits the pending chunk via ondataavailable.
+                try {
+                    if (VOICE.recorder.state === "recording")
+                        VOICE.recorder.requestData();
+                } catch (_) {}
+                // Tiny wait for the chunk to land
+                await new Promise((r) => setTimeout(r, 80));
+
+                const chunks = VOICE.recordedChunks.slice();
+                VOICE.recordedChunks = [];
+
+                if (chunks.length === 0) {
+                    dbgLog("stt", "no chunks to send");
+                    if (VOICE.chatMode) setVCStatus("Je t'écoute…");
                     return;
                 }
-                // HTTPS preflight — Web Speech API needs HTTPS in production.
+
+                const mime =
+                    VOICE.recorder.mimeType || chunks[0].type || "audio/webm";
+                const blob = new Blob(chunks, { type: mime });
+                dbgLog("stt", "→ POST /stt", {
+                    size: blob.size,
+                    mime: blob.type,
+                });
+                const t0 = performance.now();
+                try {
+                    const fd = new FormData();
+                    const ext = /mp4/.test(mime)
+                        ? "mp4"
+                        : /ogg/.test(mime)
+                          ? "ogg"
+                          : "webm";
+                    fd.append("file", blob, "audio." + ext);
+                    const r = await fetch(STT_URL, {
+                        method: "POST",
+                        body: fd,
+                    });
+                    const dt = Math.round(performance.now() - t0);
+                    if (!r.ok) {
+                        const errBody = await r.text().catch(() => "");
+                        dbgLog(
+                            "error",
+                            `stt HTTP ${r.status} (${dt}ms)`,
+                            errBody.slice(0, 200),
+                        );
+                        if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                        return;
+                    }
+                    const data = await r.json();
+                    const txt = ((data && data.text) || "").trim();
+                    dbgLog("stt", `✓ transcript (${dt}ms)`, txt.slice(0, 120));
+                    if (txt) {
+                        submitNeuronMessage(txt);
+                    } else {
+                        if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                    }
+                } catch (err) {
+                    dbgLog("error", "stt threw", err.message);
+                    if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                }
+            }
+
+            function stopMicPipeline() {
+                if (VOICE.vadInterval) {
+                    clearInterval(VOICE.vadInterval);
+                    VOICE.vadInterval = null;
+                }
+                if (VOICE.recorder) {
+                    try {
+                        if (VOICE.recorder.state !== "inactive")
+                            VOICE.recorder.stop();
+                    } catch (_) {}
+                    VOICE.recorder = null;
+                }
+                if (VOICE.mediaStream) {
+                    VOICE.mediaStream.getTracks().forEach((t) => t.stop());
+                    VOICE.mediaStream = null;
+                }
+                VOICE.vadAnalyser = null;
+                VOICE.recordedChunks = [];
+                VOICE.speechDetected = false;
+                VOICE.silenceStart = 0;
+                const vcMic = document.getElementById("vc-mic");
+                if (vcMic) vcMic.classList.remove("is-listening");
+                dbgLog("system", "■ mic pipeline stopped");
+            }
+
+            // =========================================================
+            // VOICECHAT MODE
+            // =========================================================
+            async function enterVoiceChat() {
+                // Whisper pipeline doesn't strictly need HTTPS for everything,
+                // but getUserMedia DOES on non-localhost. Keep the check.
                 const isHttps = location.protocol === "https:";
                 const isLocal =
                     location.hostname === "localhost" ||
                     location.hostname === "127.0.0.1" ||
                     location.hostname === "";
                 if (!isHttps && !isLocal) {
-                    dbgLog("error", "Page not HTTPS — STT will fail", {
+                    dbgLog("error", "Page not HTTPS — getUserMedia will fail", {
                         protocol: location.protocol,
                         host: location.host,
                     });
                     alert(
-                        "La reconnaissance vocale a besoin de HTTPS. Sers la page depuis https:// (pas file:// ni http://).",
+                        "Le micro a besoin de HTTPS. Sers la page depuis https:// (pas file:// ni http://).",
                     );
                     return;
                 }
@@ -6460,21 +6723,19 @@
                     protocol: location.protocol,
                     ua: navigator.userAgent.slice(0, 80),
                 });
-                // Reset block state on each entry — give it a fresh shot.
-                VOICE.sttBlocked = false;
-                VOICE.netErrCount = 0;
                 VOICE.chatMode = true;
-                VOICE.micMuted = false; // reset privacy toggle on each entry
-                VOICE.speakerOn = true; // ensure TTS is on
+                VOICE.micMuted = false;
+                VOICE.speakerOn = true;
                 const overlay = document.getElementById("vc-overlay");
                 if (overlay) overlay.classList.add("is-open");
                 const micBtn = document.getElementById("vc-mic");
                 if (micBtn) micBtn.classList.remove("is-muted");
                 const micLbl = document.getElementById("vc-mic-label");
                 if (micLbl) micLbl.textContent = "Micro";
-                setVCStatus("Je t'écoute…");
-                ensureAudioCtx(); // prime audio context with the user gesture
-                maybeStartListening(300);
+                setVCStatus("Activation du micro…");
+                ensureAudioCtx();
+                const ok = await startMicPipeline();
+                if (ok) setVCStatus("Je t'écoute…");
             }
 
             function leaveVoiceChat() {
@@ -6482,7 +6743,7 @@
                 VOICE.chatMode = false;
                 const overlay = document.getElementById("vc-overlay");
                 if (overlay) overlay.classList.remove("is-open");
-                stopListening();
+                stopMicPipeline();
                 if (VOICE.currentAudio) {
                     try {
                         VOICE.currentAudio.pause();
@@ -6492,7 +6753,7 @@
                 stopVisualizer();
             }
 
-            // Mic mute (user privacy toggle — pauses listening loop)
+            // Mic mute (user privacy toggle — VAD ignores while muted)
             function toggleMicMute() {
                 VOICE.micMuted = !VOICE.micMuted;
                 const btn = document.getElementById("vc-mic");
@@ -6500,31 +6761,34 @@
                 if (btn) {
                     btn.classList.toggle("is-muted", VOICE.micMuted);
                     if (VOICE.micMuted) btn.classList.remove("is-listening");
+                    else if (VOICE.recorder) btn.classList.add("is-listening");
                 }
                 if (lbl) lbl.textContent = VOICE.micMuted ? "Coupé" : "Micro";
                 if (VOICE.micMuted) {
-                    stopListening();
+                    // Discard anything captured so far in current segment.
+                    VOICE.speechDetected = false;
+                    VOICE.recordedChunks = [];
+                    VOICE.silenceStart = 0;
                     if (VOICE.chatMode) setVCStatus("Micro coupé");
                 } else {
                     if (VOICE.chatMode && !VOICE.currentAudio) {
                         setVCStatus("Je t'écoute…");
                     }
-                    maybeStartListening(100);
                 }
             }
 
             function initVoice() {
-                const SR =
-                    window.SpeechRecognition || window.webkitSpeechRecognition;
-                VOICE.sttSupported = !!SR;
+                // Capability detection — Whisper pipeline needs both.
+                VOICE.sttSupported = !!(
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia &&
+                    window.MediaRecorder
+                );
                 const micBtn = document.getElementById("neuron-mic");
-
-                // --- Top-bar mic button → opens voicechat ---
                 if (micBtn) {
                     if (!VOICE.sttSupported) {
                         micBtn.classList.add("is-disabled");
-                        micBtn.title =
-                            "Reconnaissance vocale non supportée par ce navigateur";
+                        micBtn.title = "Audio non supporté par ce navigateur";
                     } else {
                         micBtn.addEventListener("click", () =>
                             enterVoiceChat(),
@@ -6532,125 +6796,16 @@
                     }
                 }
 
-                // --- Voicechat overlay buttons ---
                 const vcMic = document.getElementById("vc-mic");
                 const vcLeave = document.getElementById("vc-leave");
                 if (vcMic) vcMic.addEventListener("click", toggleMicMute);
                 if (vcLeave) vcLeave.addEventListener("click", leaveVoiceChat);
 
-                // ESC to leave
                 document.addEventListener("keydown", (e) => {
                     if (e.key === "Escape" && VOICE.chatMode) {
                         leaveVoiceChat();
                     }
                 });
-
-                if (!VOICE.sttSupported) return;
-
-                VOICE.rec = new SR();
-                VOICE.rec.lang = "fr-FR";
-                VOICE.rec.interimResults = true;
-                VOICE.rec.continuous = false;
-                VOICE.rec.maxAlternatives = 1;
-
-                VOICE.rec.onstart = () => {
-                    VOICE.listening = true;
-                    if (vcMic && !VOICE.micMuted)
-                        vcMic.classList.add("is-listening");
-                    if (VOICE.chatMode && !VOICE.currentAudio) {
-                        setVCStatus("Je t'écoute…");
-                    }
-                    dbgLog("stt", "▶ start (lang=" + VOICE.rec.lang + ")");
-                };
-                VOICE.rec.onresult = (e) => {
-                    // Got data → network is fine, reset counter.
-                    VOICE.netErrCount = 0;
-                    let interim = "";
-                    let gotFinal = false;
-                    for (let i = e.resultIndex; i < e.results.length; i++) {
-                        const t = e.results[i][0].transcript;
-                        if (e.results[i].isFinal) {
-                            VOICE.pendingFinal += t;
-                            gotFinal = true;
-                            dbgLog("stt", "✓ final", t.slice(0, 120));
-                        } else {
-                            interim += t;
-                        }
-                    }
-                    if (!gotFinal && interim) {
-                        // Throttle interim logs — only log the latest snapshot
-                        DBG.lastInterim = interim;
-                        if (DBG.interimTimer) clearTimeout(DBG.interimTimer);
-                        DBG.interimTimer = setTimeout(() => {
-                            dbgLog(
-                                "stt",
-                                "… interim",
-                                DBG.lastInterim.slice(0, 120),
-                            );
-                        }, 280);
-                    }
-                };
-                VOICE.rec.onerror = (e) => {
-                    console.warn("[stt error]", e.error);
-                    VOICE.listening = false;
-                    if (vcMic) vcMic.classList.remove("is-listening");
-                    dbgLog("error", "✗ stt error: " + e.error);
-
-                    // "network" = browser can't reach Google STT servers.
-                    // Not transient — needs HTTPS, no Brave/blocker, etc.
-                    if (e.error === "network") {
-                        VOICE.netErrCount += 1;
-                        if (VOICE.netErrCount >= 3) {
-                            VOICE.sttBlocked = true;
-                            dbgLog(
-                                "error",
-                                "STT blocked — stopping retry loop",
-                                {
-                                    hint: "Web Speech API needs HTTPS + Google STT reachable. Try Chrome on HTTPS, switch from Brave, or disable VPN.",
-                                    protocol: location.protocol,
-                                    host: location.host,
-                                },
-                            );
-                            if (VOICE.chatMode) {
-                                setVCStatus(
-                                    "Reconnaissance vocale bloquée — voir debug",
-                                );
-                            }
-                            return;
-                        }
-                        // Up to 2 retries with growing backoff
-                        maybeStartListening(800 * VOICE.netErrCount);
-                        return;
-                    }
-
-                    // Transient errors: loop back into listening
-                    if (e.error === "no-speech" || e.error === "aborted") {
-                        maybeStartListening(400);
-                    } else {
-                        // Unknown error — log and back off, don't hammer
-                        maybeStartListening(1200);
-                    }
-                };
-                VOICE.rec.onend = () => {
-                    VOICE.listening = false;
-                    if (vcMic) vcMic.classList.remove("is-listening");
-                    const text = VOICE.pendingFinal.trim();
-                    VOICE.pendingFinal = "";
-                    dbgLog("stt", text ? "■ end → submit" : "■ end (no text)", {
-                        len: text.length,
-                    });
-                    if (text) {
-                        if (VOICE.chatMode) {
-                            setVCStatus("Amber réfléchit…");
-                            // Don't restart listening here; the TTS pipeline
-                            // (or speakAmber early-exit) will resume the loop.
-                        }
-                        submitNeuronMessage(text);
-                    } else {
-                        // No speech captured this session — keep listening
-                        maybeStartListening(150);
-                    }
-                };
             }
 
             async function speakAmber(text) {
@@ -6663,7 +6818,6 @@
                 // In chat mode but speaker muted → skip TTS, resume mic loop.
                 if (!VOICE.speakerOn || !text || !text.trim()) {
                     setVCStatus("Je t'écoute…");
-                    maybeStartListening(200);
                     return;
                 }
 
@@ -6674,7 +6828,6 @@
                     .trim();
                 if (!clean) {
                     setVCStatus("Je t'écoute…");
-                    maybeStartListening(200);
                     return;
                 }
 
@@ -6702,7 +6855,6 @@
                             errBody.slice(0, 200),
                         );
                         setVCStatus("Je t'écoute…");
-                        maybeStartListening(300);
                         return;
                     }
                     const blob = await r.blob();
@@ -6728,7 +6880,6 @@
                         stopVisualizer();
                         if (VOICE.chatMode) {
                             setVCStatus("Je t'écoute…");
-                            maybeStartListening(150);
                         }
                     };
                     audio.onerror = () => {
@@ -6738,7 +6889,6 @@
                         stopVisualizer();
                         if (VOICE.chatMode) {
                             setVCStatus("Je t'écoute…");
-                            maybeStartListening(250);
                         }
                     };
 
@@ -6749,7 +6899,6 @@
                     console.warn("[tts] failed", e);
                     dbgLog("error", "tts threw", e.message);
                     setVCStatus("Je t'écoute…");
-                    maybeStartListening(300);
                 }
             }
 
