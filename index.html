@@ -3627,6 +3627,212 @@
                 flex-direction: column;
                 align-items: center;
             }
+
+            /* =====================================================
+               DEBUG MODE (konami code: ↑↑↓↓←→←→BA)
+            ===================================================== */
+            .dbg-panel {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: min(420px, 90vw);
+                height: 100vh;
+                z-index: 10000;
+                background: rgba(8, 6, 14, 0.92);
+                color: #d8e0e8;
+                font-family:
+                    ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+                font-size: 11px;
+                line-height: 1.45;
+                display: flex;
+                flex-direction: column;
+                border-right: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: 8px 0 32px rgba(0, 0, 0, 0.6);
+                -webkit-backdrop-filter: blur(8px);
+                backdrop-filter: blur(8px);
+                animation: dbg-slidein 0.22s ease-out;
+            }
+            @keyframes dbg-slidein {
+                from {
+                    transform: translateX(-100%);
+                }
+                to {
+                    transform: translateX(0);
+                }
+            }
+            .dbg-header {
+                padding: 10px 14px 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .dbg-title {
+                font-weight: 700;
+                color: #ff5572;
+                letter-spacing: 1px;
+                font-size: 11px;
+            }
+            .dbg-sub {
+                color: rgba(255, 255, 255, 0.42);
+                font-size: 10px;
+            }
+            .dbg-actions {
+                display: flex;
+                gap: 6px;
+            }
+            .dbg-btn {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                color: #d8e0e8;
+                padding: 4px 8px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 10px;
+                font-family: inherit;
+                transition: background 0.15s ease;
+            }
+            .dbg-btn:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
+            .dbg-mic {
+                padding: 8px 14px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            .dbg-mic-label {
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 10px;
+                margin-bottom: 4px;
+                display: flex;
+                justify-content: space-between;
+            }
+            .dbg-mic-track {
+                position: relative;
+                width: 100%;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .dbg-mic-bar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0%;
+                background: linear-gradient(
+                    90deg,
+                    #4ade80 0%,
+                    #facc15 60%,
+                    #ef4444 90%
+                );
+                transition: width 0.05s linear;
+            }
+            .dbg-state {
+                padding: 8px 14px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                display: grid;
+                grid-template-columns: max-content 1fr;
+                gap: 2px 12px;
+                font-size: 10.5px;
+            }
+            .dbg-state .k {
+                color: rgba(255, 255, 255, 0.45);
+            }
+            .dbg-state .v {
+                color: #fff;
+                font-weight: 600;
+            }
+            .dbg-state .v.t {
+                color: #4ade80;
+            }
+            .dbg-state .v.f {
+                color: #f87171;
+            }
+            .dbg-log {
+                flex: 1;
+                overflow-y: auto;
+                padding: 8px 12px 14px;
+                font-size: 10.5px;
+                white-space: pre-wrap;
+                word-break: break-word;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+            }
+            .dbg-log::-webkit-scrollbar {
+                width: 6px;
+            }
+            .dbg-log::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.18);
+                border-radius: 3px;
+            }
+            .dbg-line {
+                padding: 1px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            }
+            .dbg-line.system {
+                color: #94a3b8;
+            }
+            .dbg-line.stt {
+                color: #7dd3fc;
+            }
+            .dbg-line.user {
+                color: #4ade80;
+                font-weight: 600;
+            }
+            .dbg-line.chat {
+                color: #c084fc;
+            }
+            .dbg-line.amber {
+                color: #f0abfc;
+                font-weight: 600;
+            }
+            .dbg-line.tts {
+                color: #fbbf24;
+            }
+            .dbg-line.error {
+                color: #ff6b81;
+                font-weight: 700;
+            }
+            .dbg-line .ts {
+                color: rgba(255, 255, 255, 0.32);
+                margin-right: 6px;
+            }
+            .dbg-toast {
+                position: fixed;
+                top: 18px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 100000;
+                padding: 10px 16px;
+                background: rgba(255, 85, 114, 0.95);
+                color: #fff;
+                font-family: ui-monospace, monospace;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 1.5px;
+                border-radius: 6px;
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+                animation: dbg-toast 1.6s ease-out forwards;
+            }
+            @keyframes dbg-toast {
+                0% {
+                    opacity: 0;
+                    transform: translate(-50%, -10px);
+                }
+                15% {
+                    opacity: 1;
+                    transform: translate(-50%, 0);
+                }
+                80% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                    transform: translate(-50%, -10px);
+                }
+            }
         </style>
     </head>
     <body>
@@ -4675,6 +4881,15 @@
             const WORKER_URL = "https://api.mindmatch.fr/";
 
             async function callGPT(messages, systemPrompt) {
+                const t0 = performance.now();
+                dbgLog("chat", `→ POST ${WORKER_URL}`, {
+                    msgCount: messages.length,
+                    sysLen: (systemPrompt || "").length,
+                    lastUser: messages[messages.length - 1]?.content?.slice(
+                        0,
+                        80,
+                    ),
+                });
                 try {
                     const fullMessages = [
                         { role: "system", content: systemPrompt },
@@ -4685,16 +4900,31 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ messages: fullMessages }),
                     });
+                    const dt = Math.round(performance.now() - t0);
                     if (!res.ok) {
                         const err = await res.text().catch(() => "");
+                        dbgLog(
+                            "error",
+                            `chat HTTP ${res.status} (${dt}ms)`,
+                            err.slice(0, 200),
+                        );
                         throw new Error("HTTP " + res.status + " — " + err);
                     }
                     const data = await res.json();
                     const reply = data?.choices?.[0]?.message?.content;
-                    if (reply && reply.trim()) return reply.trim();
+                    if (reply && reply.trim()) {
+                        dbgLog("chat", `← reply (${dt}ms)`, {
+                            len: reply.length,
+                            preview: reply.slice(0, 100),
+                        });
+                        return reply.trim();
+                    }
+                    dbgLog("error", `empty reply (${dt}ms)`, data);
                     return "…";
                 } catch (e) {
+                    const dt = Math.round(performance.now() - t0);
                     console.error("GPT error:", e);
+                    dbgLog("error", `chat threw (${dt}ms)`, e.message);
                     return (
                         "Oups, je n'arrive pas à répondre. Détails: " +
                         e.message
@@ -4964,6 +5194,11 @@
 
             async function submitNeuronMessage(text) {
                 if (!text.trim()) return;
+                dbgLog("user", "submitNeuronMessage", {
+                    text: text.slice(0, 120),
+                    chatMode: VOICE.chatMode,
+                    exchanges: state.neuron.exchanges,
+                });
                 state.neuron.inConversation = true;
                 state.neuron.messages.push({ from: "user", text });
                 state.neuron.exchanges += 1;
@@ -4998,6 +5233,10 @@
                     synapse,
                 });
                 renderNeuron();
+                dbgLog("amber", "reply rendered", {
+                    len: reply.length,
+                    synapse: !!synapse,
+                });
                 speakAmber(reply);
                 flashNeuronState(
                     document.getElementById("brand-mascot"),
@@ -6191,11 +6430,13 @@
 
             function enterVoiceChat() {
                 if (!VOICE.sttSupported) {
+                    dbgLog("error", "STT not supported");
                     alert(
                         "Ton navigateur ne supporte pas la reconnaissance vocale. Essaie Chrome, Edge ou Safari.",
                     );
                     return;
                 }
+                dbgLog("system", "▶ enterVoiceChat");
                 VOICE.chatMode = true;
                 VOICE.micMuted = false; // reset privacy toggle on each entry
                 VOICE.speakerOn = true; // ensure TTS is on
@@ -6211,6 +6452,7 @@
             }
 
             function leaveVoiceChat() {
+                dbgLog("system", "■ leaveVoiceChat");
                 VOICE.chatMode = false;
                 const overlay = document.getElementById("vc-overlay");
                 if (overlay) overlay.classList.remove("is-open");
@@ -6292,21 +6534,39 @@
                     if (VOICE.chatMode && !VOICE.currentAudio) {
                         setVCStatus("Je t'écoute…");
                     }
+                    dbgLog("stt", "▶ start (lang=" + VOICE.rec.lang + ")");
                 };
                 VOICE.rec.onresult = (e) => {
                     let interim = "";
+                    let gotFinal = false;
                     for (let i = e.resultIndex; i < e.results.length; i++) {
                         const t = e.results[i][0].transcript;
-                        if (e.results[i].isFinal) VOICE.pendingFinal += t;
-                        else interim += t;
+                        if (e.results[i].isFinal) {
+                            VOICE.pendingFinal += t;
+                            gotFinal = true;
+                            dbgLog("stt", "✓ final", t.slice(0, 120));
+                        } else {
+                            interim += t;
+                        }
                     }
-                    // Outside voicechat: not used (mic only opens overlay).
-                    // Inside voicechat: don't show transcript, status is enough.
+                    if (!gotFinal && interim) {
+                        // Throttle interim logs — only log the latest snapshot
+                        DBG.lastInterim = interim;
+                        if (DBG.interimTimer) clearTimeout(DBG.interimTimer);
+                        DBG.interimTimer = setTimeout(() => {
+                            dbgLog(
+                                "stt",
+                                "… interim",
+                                DBG.lastInterim.slice(0, 120),
+                            );
+                        }, 280);
+                    }
                 };
                 VOICE.rec.onerror = (e) => {
                     console.warn("[stt error]", e.error);
                     VOICE.listening = false;
                     if (vcMic) vcMic.classList.remove("is-listening");
+                    dbgLog("error", "✗ stt error: " + e.error);
                     if (
                         e.error === "no-speech" ||
                         e.error === "aborted" ||
@@ -6321,6 +6581,9 @@
                     if (vcMic) vcMic.classList.remove("is-listening");
                     const text = VOICE.pendingFinal.trim();
                     VOICE.pendingFinal = "";
+                    dbgLog("stt", text ? "■ end → submit" : "■ end (no text)", {
+                        len: text.length,
+                    });
                     if (text) {
                         if (VOICE.chatMode) {
                             setVCStatus("Amber réfléchit…");
@@ -6337,7 +6600,10 @@
 
             async function speakAmber(text) {
                 // Hard gate: TTS is voicechat-mode only.
-                if (!VOICE.chatMode) return;
+                if (!VOICE.chatMode) {
+                    dbgLog("tts", "skip (not in chatMode)");
+                    return;
+                }
 
                 // In chat mode but speaker muted → skip TTS, resume mic loop.
                 if (!VOICE.speakerOn || !text || !text.trim()) {
@@ -6357,6 +6623,11 @@
                     return;
                 }
 
+                const t0 = performance.now();
+                dbgLog("tts", `→ POST ${TTS_URL}`, {
+                    len: clean.length,
+                    voice: VOICE.ttsVoice,
+                });
                 try {
                     const r = await fetch(TTS_URL, {
                         method: "POST",
@@ -6366,13 +6637,21 @@
                             voice: VOICE.ttsVoice,
                         }),
                     });
+                    const dt = Math.round(performance.now() - t0);
                     if (!r.ok) {
-                        console.warn("[tts] http " + r.status);
+                        const errBody = await r.text().catch(() => "");
+                        console.warn("[tts] http " + r.status, errBody);
+                        dbgLog(
+                            "error",
+                            `tts HTTP ${r.status} (${dt}ms)`,
+                            errBody.slice(0, 200),
+                        );
                         setVCStatus("Je t'écoute…");
                         maybeStartListening(300);
                         return;
                     }
                     const blob = await r.blob();
+                    dbgLog("tts", `← mp3 ${blob.size}B (${dt}ms)`);
                     const url = URL.createObjectURL(blob);
 
                     if (VOICE.currentAudio) {
@@ -6413,6 +6692,7 @@
                     await audio.play();
                 } catch (e) {
                     console.warn("[tts] failed", e);
+                    dbgLog("error", "tts threw", e.message);
                     setVCStatus("Je t'écoute…");
                     maybeStartListening(300);
                 }
@@ -8960,9 +9240,302 @@
             }
 
             /* =================================================================
+   DEBUG MODE — konami code (↑↑↓↓←→←→BA) toggles a left-side console.
+================================================================= */
+            const DBG = {
+                enabled: false,
+                panel: null,
+                logEl: null,
+                stateEl: null,
+                konamiSeq: [38, 38, 40, 40, 37, 39, 37, 39, 66, 65],
+                konamiPos: 0,
+                micStream: null,
+                micAnalyser: null,
+                rafId: null,
+                stateTimer: null,
+                bootBuffer: [],
+                lastInterim: "",
+                interimTimer: null,
+                maxLines: 500,
+            };
+
+            function dbgLog(category, text, data) {
+                // Mirror to console always, so logs are also in DevTools.
+                try {
+                    if (data !== undefined)
+                        console.log(`[${category}]`, text, data);
+                    else console.log(`[${category}]`, text);
+                } catch (_) {}
+                // Buffer if panel not open yet, so first toggle replays history.
+                if (!DBG.enabled || !DBG.logEl) {
+                    if (DBG.bootBuffer.length < 200) {
+                        DBG.bootBuffer.push([Date.now(), category, text, data]);
+                    }
+                    return;
+                }
+                _dbgWriteLine(Date.now(), category, text, data);
+            }
+
+            function _dbgWriteLine(ts, category, text, data) {
+                const d = new Date(ts);
+                const tsStr =
+                    d.toLocaleTimeString("fr-FR", { hour12: false }) +
+                    "." +
+                    String(ts % 1000).padStart(3, "0");
+                let body = text;
+                if (data !== undefined) {
+                    let s;
+                    try {
+                        s =
+                            typeof data === "string"
+                                ? data
+                                : JSON.stringify(data);
+                    } catch (_) {
+                        s = String(data);
+                    }
+                    body += "  " + s;
+                }
+                const line = document.createElement("div");
+                line.className = "dbg-line " + category;
+                const tsSpan = document.createElement("span");
+                tsSpan.className = "ts";
+                tsSpan.textContent = tsStr;
+                line.appendChild(tsSpan);
+                line.appendChild(document.createTextNode(body));
+                DBG.logEl.appendChild(line);
+                while (DBG.logEl.childElementCount > DBG.maxLines) {
+                    DBG.logEl.firstChild.remove();
+                }
+                DBG.logEl.scrollTop = DBG.logEl.scrollHeight;
+            }
+
+            function dbgToggle() {
+                DBG.enabled = !DBG.enabled;
+                if (DBG.enabled) dbgOpen();
+                else dbgClose();
+                _dbgToast(DBG.enabled ? "DEBUG ON" : "DEBUG OFF");
+            }
+
+            function _dbgToast(text) {
+                const t = document.createElement("div");
+                t.className = "dbg-toast";
+                t.textContent = text;
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 1700);
+            }
+
+            function dbgOpen() {
+                if (DBG.panel) return;
+                const p = document.createElement("div");
+                p.className = "dbg-panel";
+                p.innerHTML = `
+                    <div class="dbg-header">
+                        <div>
+                            <div class="dbg-title">DEBUG</div>
+                            <div class="dbg-sub">konami → toggle • Esc closes</div>
+                        </div>
+                        <div class="dbg-actions">
+                            <button class="dbg-btn" id="dbg-ping">ping /tts</button>
+                            <button class="dbg-btn" id="dbg-clear">clear</button>
+                            <button class="dbg-btn" id="dbg-close">×</button>
+                        </div>
+                    </div>
+                    <div class="dbg-mic">
+                        <div class="dbg-mic-label">
+                            <span>mic level</span>
+                            <span id="dbg-mic-status">stopped</span>
+                        </div>
+                        <div class="dbg-mic-track">
+                            <div class="dbg-mic-bar" id="dbg-mic-bar"></div>
+                        </div>
+                    </div>
+                    <div class="dbg-state" id="dbg-state"></div>
+                    <div class="dbg-log" id="dbg-log"></div>
+                `;
+                document.body.appendChild(p);
+                DBG.panel = p;
+                DBG.logEl = p.querySelector("#dbg-log");
+                DBG.stateEl = p.querySelector("#dbg-state");
+
+                p.querySelector("#dbg-clear").addEventListener("click", () => {
+                    if (DBG.logEl) DBG.logEl.innerHTML = "";
+                });
+                p.querySelector("#dbg-close").addEventListener(
+                    "click",
+                    dbgToggle,
+                );
+                p.querySelector("#dbg-ping").addEventListener(
+                    "click",
+                    dbgPingTTS,
+                );
+
+                // Replay buffered logs so the panel shows boot-time events too.
+                const buf = DBG.bootBuffer;
+                DBG.bootBuffer = [];
+                buf.forEach((row) => _dbgWriteLine(...row));
+
+                dbgRefreshState();
+                DBG.stateTimer = setInterval(dbgRefreshState, 250);
+                dbgStartMicViz();
+                dbgLog("system", "panel opened");
+            }
+
+            function dbgClose() {
+                if (!DBG.panel) return;
+                if (DBG.stateTimer) {
+                    clearInterval(DBG.stateTimer);
+                    DBG.stateTimer = null;
+                }
+                dbgStopMicViz();
+                DBG.panel.remove();
+                DBG.panel = null;
+                DBG.logEl = null;
+                DBG.stateEl = null;
+            }
+
+            function dbgRefreshState() {
+                if (!DBG.stateEl) return;
+                const rows = [
+                    ["chatMode", VOICE.chatMode],
+                    ["listening", VOICE.listening],
+                    ["micMuted", VOICE.micMuted],
+                    ["speakerOn", VOICE.speakerOn],
+                    ["amberSpeaking", !!VOICE.currentAudio],
+                    ["sttSupported", VOICE.sttSupported],
+                    ["pendingFinal", (VOICE.pendingFinal || "").length + " ch"],
+                    ["audioCtx", VOICE.audioCtx ? VOICE.audioCtx.state : "—"],
+                    ["worker", WORKER_URL],
+                    ["voice_id", VOICE.ttsVoice || "(default)"],
+                ];
+                DBG.stateEl.innerHTML = rows
+                    .map(([k, v]) => {
+                        let cls = "v";
+                        if (v === true) cls += " t";
+                        if (v === false) cls += " f";
+                        return `<span class="k">${k}</span><span class="${cls}">${v}</span>`;
+                    })
+                    .join("");
+            }
+
+            async function dbgStartMicViz() {
+                const statusEl = document.getElementById("dbg-mic-status");
+                if (DBG.micStream) return;
+                try {
+                    DBG.micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                        },
+                    });
+                    const ctx = ensureAudioCtx();
+                    if (!ctx) {
+                        if (statusEl) statusEl.textContent = "no audioCtx";
+                        return;
+                    }
+                    const src = ctx.createMediaStreamSource(DBG.micStream);
+                    const a = ctx.createAnalyser();
+                    a.fftSize = 128;
+                    a.smoothingTimeConstant = 0.6;
+                    src.connect(a);
+                    DBG.micAnalyser = a;
+                    if (statusEl) statusEl.textContent = "live";
+                    const data = new Uint8Array(a.fftSize);
+                    const bar = document.getElementById("dbg-mic-bar");
+                    function tick() {
+                        if (!DBG.enabled || !DBG.micAnalyser) return;
+                        DBG.micAnalyser.getByteTimeDomainData(data);
+                        let sum = 0;
+                        for (let i = 0; i < data.length; i++) {
+                            const v = (data[i] - 128) / 128;
+                            sum += v * v;
+                        }
+                        const rms = Math.sqrt(sum / data.length);
+                        const pct = Math.min(100, Math.floor(rms * 380));
+                        if (bar) bar.style.width = pct + "%";
+                        DBG.rafId = requestAnimationFrame(tick);
+                    }
+                    tick();
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = "error: " + e.name;
+                    dbgLog("error", "mic viz failed", e.message);
+                }
+            }
+
+            function dbgStopMicViz() {
+                if (DBG.rafId) {
+                    cancelAnimationFrame(DBG.rafId);
+                    DBG.rafId = null;
+                }
+                if (DBG.micStream) {
+                    DBG.micStream.getTracks().forEach((t) => t.stop());
+                    DBG.micStream = null;
+                }
+                DBG.micAnalyser = null;
+                const bar = document.getElementById("dbg-mic-bar");
+                if (bar) bar.style.width = "0%";
+            }
+
+            async function dbgPingTTS() {
+                const url = WORKER_URL.replace(/\/$/, "") + "/tts";
+                dbgLog("system", "ping → " + url);
+                const t0 = performance.now();
+                try {
+                    const r = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text: "Test débug." }),
+                    });
+                    const dt = Math.round(performance.now() - t0);
+                    if (!r.ok) {
+                        const t = await r.text().catch(() => "");
+                        dbgLog(
+                            "error",
+                            `ping HTTP ${r.status} (${dt}ms)`,
+                            t.slice(0, 300),
+                        );
+                    } else {
+                        const b = await r.blob();
+                        dbgLog("tts", `ping OK ${b.size}B (${dt}ms)`);
+                    }
+                } catch (e) {
+                    dbgLog("error", "ping threw", e.message);
+                }
+            }
+
+            function dbgInit() {
+                document.addEventListener("keydown", (e) => {
+                    // Ignore key events while typing in a field (so the konami
+                    // code doesn't fire accidentally).
+                    const tag = (e.target && e.target.tagName) || "";
+                    if (
+                        tag === "INPUT" ||
+                        tag === "TEXTAREA" ||
+                        (e.target && e.target.isContentEditable)
+                    ) {
+                        DBG.konamiPos = 0;
+                        return;
+                    }
+                    const wanted = DBG.konamiSeq[DBG.konamiPos];
+                    if (e.keyCode === wanted) {
+                        DBG.konamiPos++;
+                        if (DBG.konamiPos === DBG.konamiSeq.length) {
+                            DBG.konamiPos = 0;
+                            dbgToggle();
+                        }
+                    } else {
+                        DBG.konamiPos = 0;
+                    }
+                    if (e.key === "Escape" && DBG.enabled) {
+                        dbgToggle();
+                    }
+                });
+            }
+
+            /* =================================================================
    10. INIT
 ================================================================= */
             async function init() {
+                dbgInit();
                 initAuthUI();
                 initTabs();
                 initNeuronInput();
