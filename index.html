@@ -3833,6 +3833,181 @@
                     transform: translate(-50%, -10px);
                 }
             }
+
+            /* =================================================================
+               IMPORT PAGE (settings → Importer depuis une autre IA)
+            ================================================================= */
+            .import-page {
+                padding: 16px 14px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .import-intro {
+                color: #9aa0b4;
+                font-size: 13.5px;
+                line-height: 1.55;
+                margin: 0;
+            }
+            .import-step-title {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #6e7691;
+                margin: 0 0 8px;
+                font-weight: 600;
+            }
+            .import-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .import-provider {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+                padding: 16px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                transition:
+                    transform 0.15s ease,
+                    border-color 0.15s ease,
+                    background 0.15s ease;
+                color: #fff;
+                font-family: inherit;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .import-provider:hover {
+                transform: translateY(-2px);
+                background: rgba(255, 255, 255, 0.07);
+                border-color: rgba(255, 255, 255, 0.16);
+            }
+            .import-provider:active {
+                transform: translateY(0);
+            }
+            .import-provider .ip-icon {
+                width: 38px;
+                height: 38px;
+                display: grid;
+                place-items: center;
+                border-radius: 10px;
+                font-size: 17px;
+            }
+            .import-prompt-details {
+                margin: 0;
+            }
+            .import-prompt-details > summary {
+                color: #6e7691;
+                font-size: 12px;
+                cursor: pointer;
+                user-select: none;
+                padding: 4px 0;
+            }
+            .import-prompt-details > summary:hover {
+                color: #9aa0b4;
+            }
+            .import-prompt-pre {
+                background: rgba(0, 0, 0, 0.4);
+                padding: 10px 12px;
+                border-radius: 8px;
+                font-size: 11px;
+                max-height: 200px;
+                overflow: auto;
+                white-space: pre-wrap;
+                word-break: break-word;
+                color: #c9cfe1;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                margin: 6px 0 0;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            .import-textarea {
+                width: 100%;
+                min-height: 220px;
+                background: rgba(0, 0, 0, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 12px;
+                color: #fff;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 12px;
+                resize: vertical;
+                box-sizing: border-box;
+                line-height: 1.4;
+            }
+            .import-textarea:focus {
+                outline: none;
+                border-color: rgba(255, 255, 255, 0.25);
+                background: rgba(0, 0, 0, 0.5);
+            }
+            .import-textarea::placeholder {
+                color: #4a5170;
+            }
+            .import-submit {
+                background: linear-gradient(135deg, #6c5ce7, #a55cff);
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                padding: 14px 18px;
+                font-weight: 600;
+                font-size: 15px;
+                cursor: pointer;
+                width: 100%;
+                font-family: inherit;
+                transition:
+                    opacity 0.2s,
+                    transform 0.1s;
+            }
+            .import-submit:hover:not(:disabled) {
+                opacity: 0.92;
+            }
+            .import-submit:active:not(:disabled) {
+                transform: scale(0.99);
+            }
+            .import-submit:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .import-status {
+                font-size: 13px;
+                color: #9aa0b4;
+                text-align: center;
+                min-height: 18px;
+            }
+            .import-status.error {
+                color: #ff6b6b;
+            }
+            .import-status.ok {
+                color: #4ade80;
+            }
+            .import-toast {
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(20, 20, 30, 0.95);
+                color: #fff;
+                padding: 10px 16px;
+                border-radius: 999px;
+                font-size: 13px;
+                z-index: 9999;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                animation: importToastIn 0.25s ease;
+                pointer-events: none;
+            }
+            @keyframes importToastIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, 8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, 0);
+                }
+            }
         </style>
     </head>
     <body>
@@ -4879,6 +5054,297 @@
    GPT API
 ================================================================= */
             const WORKER_URL = "https://api.mindmatch.fr/";
+
+            /* =================================================================
+   IMPORT (XML profile import from external AIs)
+================================================================= */
+            const IMPORT_PROMPT = `Based on all our past conversations and any stored memory you have about me,
+produce a complete personal profile in XML format for MindMatch — a matching platform.
+
+Extract everything you know or can reasonably infer about me.
+Be exhaustive. Preserve my exact words verbatim where possible.
+Send me the result as a downloadable XML file
+
+Rules:
+- Only include information grounded in actual conversations — never invent
+- Add attribute source="explicit" if I stated it clearly
+- Add attribute source="inferred" if you deduced it from context
+- Add attribute confidence="0.9|0.8|0.7|0.6|0.5" (numeric scale)
+- Use 0.9 = stated clearly multiple times / 0.7 = stated once clearly / 0.6 = strongly inferred / 0.5 = weak signal
+- If a category has no data, include the tag empty
+- Do NOT include AI responses — only what I said or revealed
+- For sensitive fields (politics, religion, health, finances, orientation): include ONLY if I stated it explicitly
+
+Output strictly in this XML structure, nothing else:
+
+<mindmatch_profile>
+
+  <import_metadata>
+    <source_ai>chatgpt</source_ai>
+    <export_date></export_date>
+    <total_conversations_analyzed></total_conversations_analyzed>
+    <coverage_quality>rich|moderate|sparse</coverage_quality>
+    <strongest_categories></strongest_categories>
+    <weakest_categories></weakest_categories>
+  </import_metadata>
+
+  <identity>
+    <item field="first_name" source="" confidence=""></item>
+    <item field="age" source="" confidence=""></item>
+    <item field="location_city" source="" confidence=""></item>
+    <item field="location_country" source="" confidence=""></item>
+    <item field="living_situation" source="" confidence=""></item>
+    <item field="relationship_status" source="" confidence=""></item>
+    <item field="has_children" source="" confidence=""></item>
+    <item field="wants_children" source="" confidence=""></item>
+    <item field="languages" source="" confidence=""></item>
+    <item field="nationality" source="" confidence=""></item>
+    <item field="generation" source="" confidence=""></item>
+  </identity>
+
+  <professional>
+    <item field="current_job_title" source="" confidence=""></item>
+    <item field="company_name" source="" confidence=""></item>
+    <item field="company_type" source="" confidence=""></item>
+    <item field="sector" source="" confidence=""></item>
+    <item field="seniority_level" source="" confidence=""></item>
+    <item field="employment_type" source="" confidence=""></item>
+    <item field="work_mode" source="" confidence=""></item>
+    <item field="years_experience" source="" confidence=""></item>
+    <item field="key_skills" source="" confidence=""></item>
+    <item field="superpower" source="" confidence=""></item>
+    <item field="work_frustrations" source="" confidence=""></item>
+    <item field="relationship_to_work" source="" confidence=""></item>
+    <item field="professional_ambitions" source="" confidence=""></item>
+    <item field="wants_to_entrepreneurship" source="" confidence=""></item>
+    <item field="past_roles" source="" confidence=""></item>
+    <item field="looking_for_cofounders" source="" confidence=""></item>
+    <item field="looking_for_jobs" source="" confidence=""></item>
+  </professional>
+
+  <education>
+    <item field="degree_level" source="" confidence=""></item>
+    <item field="field_of_study" source="" confidence=""></item>
+    <item field="institutions" source="" confidence=""></item>
+    <item field="studied_abroad" source="" confidence=""></item>
+    <item field="self_taught_domains" source="" confidence=""></item>
+    <item field="currently_learning" source="" confidence=""></item>
+  </education>
+
+  <intellectual_profile>
+    <item field="frequent_topics" source="" confidence=""></item>
+    <item field="thinking_style" source="" confidence=""></item>
+    <item field="curiosity_level" source="" confidence=""></item>
+    <item field="expertise_domains" source="" confidence=""></item>
+    <item field="cognitive_style" source="" confidence=""></item>
+    <item field="depth_vs_breadth" source="" confidence=""></item>
+    <item field="loves_debate" source="" confidence=""></item>
+  </intellectual_profile>
+
+  <interests_passions>
+    <item field="top_passion" source="" confidence=""></item>
+    <item field="recurring_topics" source="" confidence=""></item>
+    <item field="sports_practiced" source="" confidence=""></item>
+    <item field="sports_frequency" source="" confidence=""></item>
+    <item field="music_genres" source="" confidence=""></item>
+    <item field="plays_instrument" source="" confidence=""></item>
+    <item field="cinema_genres" source="" confidence=""></item>
+    <item field="favorite_films" source="" confidence=""></item>
+    <item field="book_genres" source="" confidence=""></item>
+    <item field="favorite_books" source="" confidence=""></item>
+    <item field="series_genres" source="" confidence=""></item>
+    <item field="gaming" source="" confidence=""></item>
+    <item field="travel_frequency" source="" confidence=""></item>
+    <item field="travel_style" source="" confidence=""></item>
+    <item field="favorite_destinations" source="" confidence=""></item>
+    <item field="food_preferences" source="" confidence=""></item>
+    <item field="cooks" source="" confidence=""></item>
+    <item field="loves_nature" source="" confidence=""></item>
+    <item field="tech_enthusiasm" source="" confidence=""></item>
+    <item field="philosophy_interest" source="" confidence=""></item>
+    <item field="art_interest" source="" confidence=""></item>
+    <item field="activism" source="" confidence=""></item>
+  </interests_passions>
+
+  <aesthetic_taste>
+    <item field="interior_style" source="" confidence=""></item>
+    <item field="clothing_style" source="" confidence=""></item>
+    <item field="design_sensitivity" source="" confidence=""></item>
+    <item field="favorite_landscape" source="" confidence=""></item>
+    <item field="beauty_vs_function" source="" confidence=""></item>
+    <item field="favorite_season" source="" confidence=""></item>
+  </aesthetic_taste>
+
+  <values_worldview>
+    <item field="stated_values" source="" confidence=""></item>
+    <item field="view_on_technology" source="" confidence=""></item>
+    <item field="view_on_ai" source="" confidence=""></item>
+    <item field="view_on_society" source="" confidence=""></item>
+    <item field="view_on_environment" source="" confidence=""></item>
+    <item field="ecological_actions" source="" confidence=""></item>
+    <item field="view_on_money" source="" confidence=""></item>
+    <item field="family_vs_career" source="" confidence=""></item>
+    <item field="stability_vs_adventure" source="" confidence=""></item>
+    <item field="individual_vs_collective" source="" confidence=""></item>
+    <item field="political_views" source="explicit only" confidence=""></item>
+    <item field="religion_spirituality" source="explicit only" confidence=""></item>
+    <item field="view_on_marriage" source="" confidence=""></item>
+    <item field="view_on_monogamy" source="" confidence=""></item>
+  </values_worldview>
+
+  <personality>
+    <item field="communication_style" source="" confidence=""></item>
+    <item field="extraversion_introversion" source="" confidence=""></item>
+    <item field="openness_score" source="" confidence=""></item>
+    <item field="conscientiousness_score" source="" confidence=""></item>
+    <item field="agreeableness_score" source="" confidence=""></item>
+    <item field="neuroticism_score" source="" confidence=""></item>
+    <item field="risk_tolerance" source="" confidence=""></item>
+    <item field="perfectionism" source="" confidence=""></item>
+    <item field="humor_style" source="" confidence=""></item>
+    <item field="self_confidence" source="" confidence=""></item>
+    <item field="emotional_openness" source="" confidence=""></item>
+    <item field="rapport_with_authority" source="" confidence=""></item>
+    <item field="locus_of_control" source="" confidence=""></item>
+    <item field="attachment_style" source="" confidence=""></item>
+    <item field="conflict_style" source="" confidence=""></item>
+    <item field="need_for_solitude" source="" confidence=""></item>
+    <item field="main_motivation" source="" confidence=""></item>
+  </personality>
+
+  <projects_ambitions>
+    <project name="" status="active|planned|past" source="" confidence="">
+      <description></description>
+      <key_decisions></key_decisions>
+    </project>
+    <item field="life_goals" source="" confidence=""></item>
+    <item field="secret_ambitions" source="explicit only" confidence=""></item>
+    <item field="bucket_list" source="" confidence=""></item>
+    <item field="ideal_life_in_5_years" source="" confidence=""></item>
+    <item field="dream_location" source="" confidence=""></item>
+    <item field="what_success_means" source="" confidence=""></item>
+  </projects_ambitions>
+
+  <transformative_experiences>
+    <item field="most_impactful_trip" source="" confidence=""></item>
+    <item field="life_changing_book" source="" confidence=""></item>
+    <item field="pivotal_meeting" source="" confidence=""></item>
+    <item field="founding_failure" source="" confidence=""></item>
+    <item field="founding_success" source="" confidence=""></item>
+    <item field="before_after_event" source="" confidence=""></item>
+  </transformative_experiences>
+
+  <relationships_social>
+    <item field="partner_info" source="" confidence=""></item>
+    <item field="family_dynamics" source="" confidence=""></item>
+    <item field="relationship_with_parents" source="" confidence=""></item>
+    <item field="social_circle_size" source="" confidence=""></item>
+    <item field="social_circle_quality" source="" confidence=""></item>
+    <item field="loneliness_level" source="" confidence=""></item>
+    <item field="role_in_group" source="" confidence=""></item>
+  </relationships_social>
+
+  <what_i_seek>
+    <!-- Most important section for MindMatch — be exhaustive -->
+    <item field="type_of_connection_sought" source="" confidence=""></item>
+    <item field="dealbreakers" source="" confidence=""></item>
+    <item field="must_haves" source="" confidence=""></item>
+    <item field="desired_personality_traits" source="" confidence=""></item>
+    <item field="desired_values" source="" confidence=""></item>
+    <item field="desired_lifestyle" source="" confidence=""></item>
+    <item field="geographic_preference" source="" confidence=""></item>
+    <item field="age_range_preference" source="" confidence=""></item>
+    <item field="what_i_bring" source="" confidence=""></item>
+    <item field="what_i_need_to_receive" source="" confidence=""></item>
+    <item field="past_relationship_patterns" source="explicit only" confidence=""></item>
+  </what_i_seek>
+
+  <daily_life>
+    <item field="chronotype" source="" confidence=""></item>
+    <item field="sleep_quality" source="" confidence=""></item>
+    <item field="sport_habits" source="" confidence=""></item>
+    <item field="diet" source="" confidence=""></item>
+    <item field="alcohol" source="" confidence=""></item>
+    <item field="smoking" source="" confidence=""></item>
+    <item field="productivity_tools" source="" confidence=""></item>
+    <item field="screen_time" source="" confidence=""></item>
+    <item field="social_media_usage" source="" confidence=""></item>
+    <item field="organisation_level" source="" confidence=""></item>
+    <item field="punctuality" source="" confidence=""></item>
+    <item field="procrastination" source="" confidence=""></item>
+  </daily_life>
+
+  <digital_identity>
+    <item field="content_creator" source="" confidence=""></item>
+    <item field="platforms_used" source="" confidence=""></item>
+    <item field="ai_tools_used" source="" confidence=""></item>
+    <item field="view_on_ai" source="" confidence=""></item>
+    <item field="privacy_concerns" source="" confidence=""></item>
+    <item field="tech_early_adopter" source="" confidence=""></item>
+  </digital_identity>
+
+  <information_consumption>
+    <item field="news_sources" source="" confidence=""></item>
+    <item field="follows_current_events" source="" confidence=""></item>
+    <item field="podcasts_topics" source="" confidence=""></item>
+    <item field="critical_thinking_level" source="" confidence=""></item>
+    <item field="loves_long_form" source="" confidence=""></item>
+  </information_consumption>
+
+  <health>
+    <!-- explicit only — leave empty if not clearly stated -->
+    <item field="medical_conditions" source="explicit only" confidence=""></item>
+    <item field="mental_health" source="explicit only" confidence=""></item>
+    <item field="neurodivergence" source="explicit only" confidence=""></item>
+    <item field="finances" source="explicit only" confidence=""></item>
+    <item field="sexual_orientation" source="explicit only" confidence=""></item>
+  </health>
+
+  <other_signals>
+    <item field="" source="" confidence=""></item>
+  </other_signals>
+
+  <amber_guidance>
+    <!-- Recommendations for Amber 1 (MindMatch AI) based on this import -->
+    <well_covered_topics></well_covered_topics>
+    <topics_to_explore_first></topics_to_explore_first>
+    <weak_signals_to_confirm></weak_signals_to_confirm>
+    <sensitive_areas_detected></sensitive_areas_detected>
+    <overall_profile_richness>rich|moderate|sparse</overall_profile_richness>
+  </amber_guidance>
+
+</mindmatch_profile>`;
+
+            const IMPORT_PROVIDERS = [
+                {
+                    id: "chatgpt",
+                    name: "ChatGPT",
+                    icon: "fa-solid fa-comment-dots",
+                    color: "#10a37f",
+                    url: "https://chat.openai.com/",
+                },
+                {
+                    id: "claude",
+                    name: "Claude",
+                    icon: "fa-solid fa-brain",
+                    color: "#d97757",
+                    url: "https://claude.ai/new",
+                },
+                {
+                    id: "gemini",
+                    name: "Gemini",
+                    icon: "fa-solid fa-gem",
+                    color: "#4285f4",
+                    url: "https://gemini.google.com/app",
+                },
+                {
+                    id: "grok",
+                    name: "Grok",
+                    icon: "fa-solid fa-bolt",
+                    color: "#1d9bf0",
+                    url: "https://grok.com/",
+                },
+            ];
 
             async function callGPT(messages, systemPrompt) {
                 const t0 = performance.now();
@@ -7466,6 +7932,9 @@
                         scroll.innerHTML = "";
                         scroll.appendChild(node);
                     });
+                } else if (page === "import") {
+                    title.textContent = "Importer un profil";
+                    scroll.appendChild(renderSettingsImport());
                 }
             }
 
@@ -7527,6 +7996,13 @@
                         icon: "fa-solid fa-user",
                         label: "Compte",
                         onclick: () => navigateSettings("account"),
+                    }),
+                );
+                group.appendChild(
+                    settingsRow({
+                        icon: "fa-solid fa-file-import",
+                        label: "Importer depuis une autre IA",
+                        onclick: () => navigateSettings("import"),
                     }),
                 );
                 cat.appendChild(group);
@@ -9215,6 +9691,190 @@
                     });
                 });
                 return root;
+            }
+
+            /* =================================================================
+   9d-bis. SETTINGS — IMPORT PAGE
+================================================================= */
+            function renderSettingsImport() {
+                const root = el("div", { class: "import-page" });
+
+                root.appendChild(
+                    el(
+                        "p",
+                        { class: "import-intro" },
+                        "Récupère ton profil depuis une autre IA. Choisis le service, copie le prompt, colle la réponse XML — on s'occupe du reste.",
+                    ),
+                );
+
+                // --- A: provider grid ---
+                root.appendChild(
+                    el(
+                        "p",
+                        { class: "import-step-title" },
+                        "1. Choisis ton IA",
+                    ),
+                );
+                const grid = el("div", { class: "import-grid" });
+                let pickedProvider = null;
+
+                IMPORT_PROVIDERS.forEach((p) => {
+                    const btn = el("button", {
+                        class: "import-provider",
+                        type: "button",
+                    });
+                    const icon = el("div", {
+                        class: "ip-icon",
+                        style: `background:${p.color}22;color:${p.color}`,
+                    });
+                    icon.innerHTML = `<i class="${p.icon}"></i>`;
+                    btn.appendChild(icon);
+                    btn.appendChild(el("span", {}, p.name));
+                    btn.addEventListener("click", async () => {
+                        pickedProvider = p.id;
+                        // 1. copy prompt to clipboard
+                        let copied = false;
+                        try {
+                            await navigator.clipboard.writeText(IMPORT_PROMPT);
+                            copied = true;
+                        } catch (e) {
+                            // fallback: legacy execCommand
+                            try {
+                                const ta = document.createElement("textarea");
+                                ta.value = IMPORT_PROMPT;
+                                ta.style.position = "fixed";
+                                ta.style.opacity = "0";
+                                document.body.appendChild(ta);
+                                ta.select();
+                                copied = document.execCommand("copy");
+                                ta.remove();
+                            } catch (_) {}
+                        }
+                        showImportToast(
+                            copied
+                                ? "Prompt copié → colle-le dans " + p.name
+                                : "Copie manuelle requise — voir le prompt ci-dessous",
+                        );
+                        // 2. open AI site in new tab
+                        window.open(p.url, "_blank", "noopener,noreferrer");
+                    });
+                    grid.appendChild(btn);
+                });
+                root.appendChild(grid);
+
+                // collapsible "see prompt" for manual copy
+                const det = el("details", {
+                    class: "import-prompt-details",
+                });
+                det.appendChild(
+                    el("summary", {}, "Voir le prompt pour copie manuelle"),
+                );
+                det.appendChild(
+                    el("pre", { class: "import-prompt-pre" }, IMPORT_PROMPT),
+                );
+                root.appendChild(det);
+
+                // --- B: textarea ---
+                root.appendChild(
+                    el(
+                        "p",
+                        { class: "import-step-title" },
+                        "2. Colle le XML reçu",
+                    ),
+                );
+                const ta = el("textarea", {
+                    class: "import-textarea",
+                    placeholder:
+                        "<mindmatch_profile>\n  ...\n</mindmatch_profile>",
+                    spellcheck: "false",
+                });
+                root.appendChild(ta);
+
+                // --- C: submit + status ---
+                const status = el("div", { class: "import-status" }, "");
+                const submitBtn = el(
+                    "button",
+                    { class: "import-submit", type: "button" },
+                    "Importer mon profil",
+                );
+
+                submitBtn.addEventListener("click", async () => {
+                    const xml = (ta.value || "").trim();
+                    if (!xml.startsWith("<")) {
+                        status.textContent =
+                            "XML invalide — colle d'abord la réponse de l'IA.";
+                        status.className = "import-status error";
+                        return;
+                    }
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = "Analyse en cours…";
+                    status.className = "import-status";
+                    status.textContent = "L'agent normalise ton profil…";
+
+                    try {
+                        const json = await callImportAgent(
+                            xml,
+                            pickedProvider || "unknown",
+                        );
+                        const q = json?._meta?.coverage_quality || "?";
+                        const filled = json?._meta?.stats?.filled ?? "?";
+                        status.textContent = `✔ Profil importé — qualité : ${q} (${filled} champs)`;
+                        status.className = "import-status ok";
+                        downloadJSON(json, "profil_clean.json");
+                    } catch (e) {
+                        console.error("[import]", e);
+                        status.textContent = "Erreur : " + (e.message || e);
+                        status.className = "import-status error";
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Importer mon profil";
+                    }
+                });
+
+                root.appendChild(submitBtn);
+                root.appendChild(status);
+
+                return root;
+            }
+
+            function showImportToast(msg) {
+                const t = el("div", { class: "import-toast" }, msg);
+                document.body.appendChild(t);
+                setTimeout(() => {
+                    t.style.transition = "opacity .25s";
+                    t.style.opacity = "0";
+                    setTimeout(() => t.remove(), 260);
+                }, 2600);
+            }
+
+            function downloadJSON(obj, filename) {
+                const blob = new Blob([JSON.stringify(obj, null, 2)], {
+                    type: "application/json",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            }
+
+            async function callImportAgent(xml, provider) {
+                const url = WORKER_URL.replace(/\/$/, "") + "/import";
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ xml, provider }),
+                });
+                if (!res.ok) {
+                    const t = await res.text().catch(() => "");
+                    throw new Error(
+                        "HTTP " + res.status + " — " + t.slice(0, 160),
+                    );
+                }
+                return await res.json();
             }
 
             /* =================================================================
