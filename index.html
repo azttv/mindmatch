@@ -7066,32 +7066,14 @@ Output strictly in this XML structure, nothing else:
                     return false;
                 }
 
-                // Wire MediaRecorder
-                const mime = pickRecorderMime();
-                try {
-                    VOICE.recorder = new MediaRecorder(
-                        VOICE.mediaStream,
-                        mime ? { mimeType: mime } : {},
-                    );
-                } catch (err) {
-                    dbgLog("error", "MediaRecorder ctor failed", err.message);
-                    return false;
-                }
+                // NOTE: MediaRecorder is NOT created here anymore.
+                // ElevenLabs Scribe rejects mid-stream WebM chunks (no header).
+                // We start a fresh recorder per utterance in the VAD loop, then
+                // stop() it on silence — that produces a properly finalized
+                // container that Scribe accepts.
+                VOICE.recorder = null;
                 VOICE.recordedChunks = [];
-                VOICE.recorder.ondataavailable = (e) => {
-                    if (!e.data || e.data.size === 0) return;
-                    if (VOICE.speechDetected) {
-                        VOICE.recordedChunks.push(e.data);
-                    }
-                    // Chunks before speech are simply ignored.
-                };
-                VOICE.recorder.onerror = (e) => {
-                    dbgLog("error", "recorder error", String(e.error || e));
-                };
-                VOICE.recorder.start(150); // chunk every 150ms
-                dbgLog("system", "▶ mic pipeline", {
-                    mime: mime || "(default)",
-                });
+                dbgLog("system", "▶ mic pipeline (per-utterance recorder)");
 
                 // Mic button visual: pulsing red while listening
                 const vcMic = document.getElementById("vc-mic");
@@ -7102,6 +7084,41 @@ Output strictly in this XML structure, nothing else:
                 return true;
             }
 
+            function startUtteranceRecorder() {
+                const mime = pickRecorderMime();
+                try {
+                    VOICE.recorder = new MediaRecorder(
+                        VOICE.mediaStream,
+                        mime ? { mimeType: mime } : {},
+                    );
+                } catch (err) {
+                    dbgLog("error", "MediaRecorder ctor failed", err.message);
+                    VOICE.recorder = null;
+                    return false;
+                }
+                VOICE.recordedChunks = [];
+                VOICE.recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0)
+                        VOICE.recordedChunks.push(e.data);
+                };
+                VOICE.recorder.onerror = (e) => {
+                    dbgLog("error", "recorder error", String(e.error || e));
+                };
+                // No timeslice → single complete blob is delivered on stop().
+                VOICE.recorder.start();
+                return true;
+            }
+
+            function discardUtteranceRecorder() {
+                if (!VOICE.recorder) return;
+                try {
+                    if (VOICE.recorder.state !== "inactive")
+                        VOICE.recorder.stop();
+                } catch (_) {}
+                VOICE.recorder = null;
+                VOICE.recordedChunks = [];
+            }
+
             function startVADLoop() {
                 if (VOICE.vadInterval) clearInterval(VOICE.vadInterval);
                 VOICE.speechDetected = false;
@@ -7109,8 +7126,7 @@ Output strictly in this XML structure, nothing else:
                 VOICE.utteranceStart = 0;
                 const data = new Uint8Array(VOICE.vadAnalyser.fftSize);
                 VOICE.vadInterval = setInterval(() => {
-                    if (!VOICE.vadAnalyser || !VOICE.recorder) return;
-                    if (VOICE.recorder.state !== "recording") return;
+                    if (!VOICE.vadAnalyser) return;
                     if (VOICE.micMuted) return;
                     if (!VOICE.chatMode) return;
 
@@ -7143,12 +7159,14 @@ Output strictly in this XML structure, nothing else:
 
                     if (speaking) {
                         if (!VOICE.speechDetected) {
+                            // Spin up a fresh recorder for this utterance.
+                            if (!startUtteranceRecorder()) return;
                             VOICE.speechDetected = true;
                             VOICE.utteranceStart = now;
-                            VOICE.recordedChunks = []; // fresh segment
                             if (VOICE.chatMode) setVCStatus("Je t'écoute…");
                             dbgLog("stt", "▶ speech detected", {
                                 rms: rms.toFixed(3),
+                                mime: VOICE.recorder.mimeType || "(default)",
                             });
                         }
                         VOICE.silenceStart = 0;
@@ -7165,7 +7183,7 @@ Output strictly in this XML structure, nothing else:
                                 });
                                 VOICE.speechDetected = false;
                                 VOICE.silenceStart = 0;
-                                VOICE.recordedChunks = [];
+                                discardUtteranceRecorder();
                             }
                         }
                     }
@@ -7188,14 +7206,27 @@ Output strictly in this XML structure, nothing else:
                 VOICE.silenceStart = 0;
                 if (VOICE.chatMode) setVCStatus("Amber réfléchit…");
 
-                // Force the recorder to flush its current buffer as a chunk.
-                // requestData() emits the pending chunk via ondataavailable.
+                // Stop the recorder and wait for `onstop` — this is what
+                // finalizes the WebM/MP4 container (cluster terminators,
+                // EBML close tags). Whisper tolerated mid-stream chunks but
+                // ElevenLabs Scribe rejects them as "invalid_audio".
+                const recorder = VOICE.recorder;
+                const recMime = recorder.mimeType || "";
+                VOICE.recorder = null;
+
+                const stopPromise = new Promise((resolve) => {
+                    recorder.onstop = resolve;
+                });
                 try {
-                    if (VOICE.recorder.state === "recording")
-                        VOICE.recorder.requestData();
-                } catch (_) {}
-                // Tiny wait for the chunk to land
-                await new Promise((r) => setTimeout(r, 80));
+                    if (recorder.state !== "inactive") recorder.stop();
+                } catch (_) {
+                    // already stopped — fall through
+                }
+                // Hard timeout in case onstop never fires (some browsers)
+                await Promise.race([
+                    stopPromise,
+                    new Promise((r) => setTimeout(r, 500)),
+                ]);
 
                 const chunks = VOICE.recordedChunks.slice();
                 VOICE.recordedChunks = [];
@@ -7206,8 +7237,7 @@ Output strictly in this XML structure, nothing else:
                     return;
                 }
 
-                const mime =
-                    VOICE.recorder.mimeType || chunks[0].type || "audio/wav";
+                const mime = recMime || chunks[0].type || "audio/webm";
                 const blob = new Blob(chunks, { type: mime });
                 dbgLog("stt", "→ POST /stt", {
                     size: blob.size,
@@ -7220,7 +7250,7 @@ Output strictly in this XML structure, nothing else:
                         ? "mp4"
                         : /ogg/.test(mime)
                           ? "ogg"
-                          : "wav";
+                          : "webm";
                     fd.append("file", blob, "audio." + ext);
                     const r = await fetch(STT_URL, {
                         method: "POST",
@@ -7339,14 +7369,15 @@ Output strictly in this XML structure, nothing else:
                 if (btn) {
                     btn.classList.toggle("is-muted", VOICE.micMuted);
                     if (VOICE.micMuted) btn.classList.remove("is-listening");
-                    else if (VOICE.recorder) btn.classList.add("is-listening");
+                    else if (VOICE.mediaStream)
+                        btn.classList.add("is-listening");
                 }
                 if (lbl) lbl.textContent = VOICE.micMuted ? "Coupé" : "Micro";
                 if (VOICE.micMuted) {
                     // Discard anything captured so far in current segment.
                     VOICE.speechDetected = false;
-                    VOICE.recordedChunks = [];
                     VOICE.silenceStart = 0;
+                    discardUtteranceRecorder();
                     if (VOICE.chatMode) setVCStatus("Micro coupé");
                 } else {
                     if (VOICE.chatMode && !VOICE.currentAudio) {
