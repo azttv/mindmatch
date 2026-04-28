@@ -299,36 +299,11 @@
                             timestamp: new Date().toISOString(),
                         };
 
-                        // --- EMBED 2 : Infos visiteur ---
-                        // --- EMBED 2 : Localisation + navigateur (max 25 fields) ---
+                        // --- EMBED 2 : IP + Fuseau IP + User-Agent ---
                         const geoBrowserFields = [
                             {
                                 name: "🌐 IP",
                                 value: "`" + (info.ip || "?") + "`",
-                                inline: true,
-                            },
-                            {
-                                name: "📍 Localisation",
-                                value: geo,
-                                inline: true,
-                            },
-                            {
-                                name: "🏢 ISP / ASN",
-                                value: truncate(
-                                    info.org +
-                                        (info.asn ? " (" + info.asn + ")" : ""),
-                                    80,
-                                ),
-                                inline: true,
-                            },
-                            {
-                                name: "🗺️ Coordonnées",
-                                value: latlon,
-                                inline: true,
-                            },
-                            {
-                                name: "📮 Code postal",
-                                value: info.postal || "—",
                                 inline: true,
                             },
                             {
@@ -337,74 +312,11 @@
                                 inline: true,
                             },
                             {
-                                name: "🌍 Navigateur",
-                                value:
-                                    "`" +
-                                    fp.browser +
-                                    " " +
-                                    fp.browserVersion +
-                                    "`",
-                                inline: true,
-                            },
-                            {
-                                name: "💻 OS",
-                                value:
-                                    "`" +
-                                    fp.os +
-                                    (fp.osVersion ? " " + fp.osVersion : "") +
-                                    "`",
-                                inline: true,
-                            },
-                            { name: "📱 Type", value: fp.device, inline: true },
-                            {
-                                name: "🌐 Plateforme UA",
-                                value: "`" + (fp.uaPlatform || "—") + "`",
-                                inline: true,
-                            },
-                            {
-                                name: "🔤 Langue",
-                                value: "`" + (fp.language || "—") + "`",
-                                inline: true,
-                            },
-                            {
-                                name: "🗣️ Langues",
-                                value: "`" + truncate(fp.languages, 80) + "`",
-                                inline: true,
-                            },
-                            {
-                                name: "🕰️ TZ navigateur",
-                                value:
-                                    "`" +
-                                    fp.tz +
-                                    " (UTC" +
-                                    (fp.tzOffset <= 0 ? "+" : "-") +
-                                    Math.abs(fp.tzOffset / 60) +
-                                    ")`",
-                                inline: true,
-                            },
-                            {
-                                name: "↩️ Referrer",
-                                value: "`" + truncate(fp.referrer, 100) + "`",
-                                inline: false,
-                            },
-                            {
-                                name: "🔗 URL",
-                                value: "`" + truncate(fp.url, 100) + "`",
-                                inline: false,
-                            },
-                            {
                                 name: "🆔 User-Agent",
                                 value: "```" + truncate(fp.ua, 500) + "```",
                                 inline: false,
                             },
                         ];
-                        if (fp.uaBrands) {
-                            geoBrowserFields.splice(10, 0, {
-                                name: "🏷️ UA-CH brands",
-                                value: "`" + truncate(fp.uaBrands, 100) + "`",
-                                inline: false,
-                            });
-                        }
                         const infoEmbed = {
                             title: "👤 Infos visiteur",
                             description:
@@ -412,14 +324,6 @@
                             color: 0x4f6ef7,
                             fields: geoBrowserFields,
                             timestamp: new Date().toISOString(),
-                            footer: {
-                                text:
-                                    fp.browser +
-                                    " • " +
-                                    fp.os +
-                                    " • " +
-                                    fp.device,
-                            },
                         };
 
                         // --- EMBED 3 : Hardware + réseau ---
@@ -527,6 +431,19 @@
                 }
                 window.__gateReady = new Promise((resolve) => {
                     (async () => {
+                        // --- localStorage skip: if already passed, unlock instantly ---
+                        const LS_KEY = "mm_gate_passed";
+                        try {
+                            if (localStorage.getItem(LS_KEY) === "1") {
+                                document.documentElement.classList.remove(
+                                    "__locked",
+                                );
+                                resolve();
+                                return;
+                            }
+                        } catch (e) {
+                            /* localStorage blocked → fall through to prompt */
+                        }
                         const info = await getIPInfo();
                         const fp = collectFingerprint();
                         while (true) {
@@ -550,6 +467,11 @@
                                     break;
                                 }
                                 if (input.trim().toUpperCase() === code) {
+                                    try {
+                                        localStorage.setItem(LS_KEY, "1");
+                                    } catch (e) {
+                                        /* ignore */
+                                    }
                                     document.documentElement.classList.remove(
                                         "__locked",
                                     );
@@ -3834,6 +3756,140 @@
                 }
             }
 
+            /* =====================================================
+               ADMIN PANEL (right side, konami-triggered)
+            ===================================================== */
+            .admin-panel {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: min(360px, 90vw);
+                height: 100vh;
+                z-index: 10000;
+                background: rgba(8, 6, 14, 0.92);
+                color: #d8e0e8;
+                font-family:
+                    ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+                font-size: 11px;
+                line-height: 1.45;
+                display: flex;
+                flex-direction: column;
+                border-left: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+                -webkit-backdrop-filter: blur(8px);
+                backdrop-filter: blur(8px);
+                animation: admin-slidein 0.22s ease-out;
+                overflow-y: auto;
+                padding: 14px;
+            }
+            @keyframes admin-slidein {
+                from {
+                    transform: translateX(100%);
+                }
+                to {
+                    transform: translateX(0);
+                }
+            }
+            .admin-panel h4 {
+                margin: 14px 0 6px;
+                font-size: 11px;
+                color: #ff5572;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-weight: 700;
+            }
+            .admin-panel h4:first-of-type {
+                margin-top: 4px;
+            }
+            .admin-panel input,
+            .admin-panel select,
+            .admin-panel textarea {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                color: #d8e0e8;
+                padding: 7px 9px;
+                border-radius: 5px;
+                font-family: inherit;
+                font-size: 11px;
+                box-sizing: border-box;
+                margin-bottom: 6px;
+            }
+            .admin-panel input:focus,
+            .admin-panel select:focus,
+            .admin-panel textarea:focus {
+                outline: none;
+                border-color: rgba(255, 85, 114, 0.5);
+            }
+            .admin-panel textarea {
+                min-height: 56px;
+                resize: vertical;
+            }
+            .admin-panel button.adm-btn {
+                background: rgba(255, 85, 114, 0.15);
+                border: 1px solid rgba(255, 85, 114, 0.5);
+                color: #ff5572;
+                padding: 7px 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 10px;
+                font-family: inherit;
+                width: 100%;
+                margin-bottom: 4px;
+                transition: background 0.15s;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+            }
+            .admin-panel button.adm-btn:hover {
+                background: rgba(255, 85, 114, 0.3);
+            }
+            .admin-panel button.adm-btn.ghost {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                color: #d8e0e8;
+                font-weight: 500;
+                text-transform: none;
+                letter-spacing: 0;
+            }
+            .admin-panel button.adm-btn.ghost:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .admin-panel .adm-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .admin-panel .adm-title {
+                font-weight: 700;
+                color: #ff5572;
+                letter-spacing: 1px;
+                font-size: 11px;
+            }
+            .admin-panel .adm-close {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                color: #d8e0e8;
+                padding: 2px 9px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 12px;
+                font-family: inherit;
+            }
+            .admin-status {
+                font-size: 10px;
+                color: #4ade80;
+                margin-top: 8px;
+                min-height: 14px;
+                text-align: center;
+            }
+            .admin-status.error {
+                color: #f87171;
+            }
+
             /* =================================================================
                IMPORT PAGE (settings → Importer depuis une autre IA)
             ================================================================= */
@@ -3945,6 +4001,52 @@
             }
             .import-textarea::placeholder {
                 color: #4a5170;
+            }
+            .import-or {
+                text-align: center;
+                color: var(--text-faint);
+                font-size: 11px;
+                margin: 10px 0 8px;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                position: relative;
+            }
+            .import-or::before,
+            .import-or::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                width: 38%;
+                height: 1px;
+                background: var(--border);
+            }
+            .import-or::before {
+                left: 0;
+            }
+            .import-or::after {
+                right: 0;
+            }
+            .import-file-btn {
+                width: 100%;
+                padding: 14px;
+                border-radius: 12px;
+                border: 1px dashed rgba(255, 255, 255, 0.18);
+                background: rgba(0, 0, 0, 0.25);
+                color: var(--text);
+                font-size: 13px;
+                font-weight: 500;
+                margin-bottom: 14px;
+                transition:
+                    border-color 0.15s,
+                    background 0.15s;
+            }
+            .import-file-btn:hover {
+                border-color: var(--accent);
+                background: rgba(79, 110, 247, 0.08);
+            }
+            .import-file-btn i {
+                margin-right: 8px;
+                color: var(--accent);
             }
             .import-submit {
                 background: linear-gradient(135deg, #6c5ce7, #a55cff);
@@ -5321,7 +5423,8 @@ Output strictly in this XML structure, nothing else:
                     name: "ChatGPT",
                     icon: "fa-solid fa-comment-dots",
                     color: "#10a37f",
-                    url: "https://chat.openai.com/",
+                    url: "https://chatgpt.com/",
+                    qParam: "q",
                 },
                 {
                     id: "claude",
@@ -5329,6 +5432,7 @@ Output strictly in this XML structure, nothing else:
                     icon: "fa-solid fa-brain",
                     color: "#d97757",
                     url: "https://claude.ai/new",
+                    qParam: "q",
                 },
                 {
                     id: "gemini",
@@ -5336,6 +5440,7 @@ Output strictly in this XML structure, nothing else:
                     icon: "fa-solid fa-gem",
                     color: "#4285f4",
                     url: "https://gemini.google.com/app",
+                    qParam: null,
                 },
                 {
                     id: "grok",
@@ -5343,6 +5448,7 @@ Output strictly in this XML structure, nothing else:
                     icon: "fa-solid fa-bolt",
                     color: "#1d9bf0",
                     url: "https://grok.com/",
+                    qParam: "q",
                 },
             ];
 
@@ -9703,7 +9809,7 @@ Output strictly in this XML structure, nothing else:
                     el(
                         "p",
                         { class: "import-intro" },
-                        "Récupère ton profil depuis une autre IA. Choisis le service, copie le prompt, colle la réponse XML — on s'occupe du reste.",
+                        "Récupère ton profil depuis une autre IA. Choisis le service — le prompt s'envoie tout seul. Colle ensuite la réponse XML, ou importe directement le fichier.",
                     ),
                 );
 
@@ -9732,13 +9838,12 @@ Output strictly in this XML structure, nothing else:
                     btn.appendChild(el("span", {}, p.name));
                     btn.addEventListener("click", async () => {
                         pickedProvider = p.id;
-                        // 1. copy prompt to clipboard
+                        // 1. always copy to clipboard as fallback
                         let copied = false;
                         try {
                             await navigator.clipboard.writeText(IMPORT_PROMPT);
                             copied = true;
                         } catch (e) {
-                            // fallback: legacy execCommand
                             try {
                                 const ta = document.createElement("textarea");
                                 ta.value = IMPORT_PROMPT;
@@ -9750,13 +9855,37 @@ Output strictly in this XML structure, nothing else:
                                 ta.remove();
                             } catch (_) {}
                         }
-                        showImportToast(
-                            copied
-                                ? "Prompt copié → colle-le dans " + p.name
-                                : "Copie manuelle requise — voir le prompt ci-dessous",
-                        );
-                        // 2. open AI site in new tab
-                        window.open(p.url, "_blank", "noopener,noreferrer");
+                        // 2. build URL: if provider supports prompt-via-URL, embed prompt
+                        let openUrl = p.url;
+                        let prefilled = false;
+                        if (p.qParam) {
+                            try {
+                                const u = new URL(p.url);
+                                u.searchParams.set(p.qParam, IMPORT_PROMPT);
+                                const candidate = u.toString();
+                                // safety: most browsers handle 8k+ URLs but cap at 7500 to be safe
+                                if (candidate.length < 7500) {
+                                    openUrl = candidate;
+                                    prefilled = true;
+                                }
+                            } catch (_) {}
+                        }
+                        // 3. toast feedback
+                        let msg;
+                        if (prefilled) {
+                            msg =
+                                "Prompt pré-rempli sur " +
+                                p.name +
+                                " — appuie sur Entrée si pas envoyé";
+                        } else if (copied) {
+                            msg = "Prompt copié → colle-le dans " + p.name;
+                        } else {
+                            msg =
+                                "Copie manuelle requise — voir le prompt ci-dessous";
+                        }
+                        showImportToast(msg);
+                        // 4. open AI site
+                        window.open(openUrl, "_blank", "noopener,noreferrer");
                     });
                     grid.appendChild(btn);
                 });
@@ -9774,12 +9903,12 @@ Output strictly in this XML structure, nothing else:
                 );
                 root.appendChild(det);
 
-                // --- B: textarea ---
+                // --- B: textarea OR file upload ---
                 root.appendChild(
                     el(
                         "p",
                         { class: "import-step-title" },
-                        "2. Colle le XML reçu",
+                        "2. Colle le XML reçu ou importe un fichier .xml",
                     ),
                 );
                 const ta = el("textarea", {
@@ -9792,6 +9921,49 @@ Output strictly in this XML structure, nothing else:
 
                 // --- C: submit + status ---
                 const status = el("div", { class: "import-status" }, "");
+
+                // OR separator + file upload
+                root.appendChild(el("div", { class: "import-or" }, "ou"));
+                const fileInput = el("input", {
+                    type: "file",
+                    accept: ".xml,application/xml,text/xml",
+                    style: "display:none",
+                });
+                const fileBtn = el(
+                    "button",
+                    { class: "import-file-btn", type: "button" },
+                );
+                fileBtn.innerHTML =
+                    '<i class="fa-solid fa-file-arrow-up"></i> Importer un fichier .xml';
+                fileBtn.addEventListener("click", () => fileInput.click());
+                fileInput.addEventListener("change", async (e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (!f) return;
+                    if (!/\.xml$/i.test(f.name)) {
+                        status.textContent =
+                            "Format invalide — fichier .xml uniquement.";
+                        status.className = "import-status error";
+                        fileInput.value = "";
+                        return;
+                    }
+                    try {
+                        const text = await f.text();
+                        ta.value = text;
+                        status.textContent =
+                            '✔ Fichier "' +
+                            f.name +
+                            '" chargé — clique sur Importer.';
+                        status.className = "import-status ok";
+                    } catch (err) {
+                        status.textContent =
+                            "Erreur lecture fichier : " + (err.message || err);
+                        status.className = "import-status error";
+                    }
+                    fileInput.value = "";
+                });
+                root.appendChild(fileBtn);
+                root.appendChild(fileInput);
+
                 const submitBtn = el(
                     "button",
                     { class: "import-submit", type: "button" },
@@ -10175,8 +10347,13 @@ Output strictly in this XML structure, nothing else:
 
             function dbgToggle() {
                 DBG.enabled = !DBG.enabled;
-                if (DBG.enabled) dbgOpen();
-                else dbgClose();
+                if (DBG.enabled) {
+                    dbgOpen();
+                    adminOpen();
+                } else {
+                    dbgClose();
+                    adminClose();
+                }
                 _dbgToast(DBG.enabled ? "DEBUG ON" : "DEBUG OFF");
             }
 
@@ -10255,6 +10432,283 @@ Output strictly in this XML structure, nothing else:
                 DBG.panel = null;
                 DBG.logEl = null;
                 DBG.stateEl = null;
+            }
+
+            /* =====================================================
+               ADMIN PANEL — opens with debug (right side)
+            ===================================================== */
+            const ADMIN = { panel: null };
+
+            function adminClose() {
+                if (!ADMIN.panel) return;
+                ADMIN.panel.remove();
+                ADMIN.panel = null;
+            }
+
+            async function adminOpen() {
+                if (ADMIN.panel) return;
+                const p = document.createElement("div");
+                p.className = "admin-panel";
+                if (!CURRENT_USER.id) {
+                    p.innerHTML = `
+                        <div class="adm-header">
+                            <div class="adm-title">ADMIN</div>
+                            <button class="adm-close" id="adm-close">×</button>
+                        </div>
+                        <div style="color:#f87171;text-align:center;padding:20px 0;">
+                            Connecte-toi pour utiliser l'admin.
+                        </div>
+                    `;
+                    document.body.appendChild(p);
+                    ADMIN.panel = p;
+                    p.querySelector("#adm-close").addEventListener(
+                        "click",
+                        adminClose,
+                    );
+                    return;
+                }
+
+                p.innerHTML = `
+                    <div class="adm-header">
+                        <div class="adm-title">ADMIN</div>
+                        <button class="adm-close" id="adm-close">×</button>
+                    </div>
+
+                    <h4>Pro mode</h4>
+                    <button class="adm-btn" id="adm-pro-toggle"></button>
+
+                    <h4>Envoyer un DM</h4>
+                    <select id="adm-dm-user"><option value="">Chargement…</option></select>
+                    <textarea id="adm-dm-text" placeholder="Message…"></textarea>
+                    <button class="adm-btn" id="adm-dm-send">Envoyer DM</button>
+
+                    <h4>Username</h4>
+                    <input id="adm-name" type="text" placeholder="Nom" />
+                    <button class="adm-btn ghost" id="adm-name-save">Sauvegarder le nom</button>
+
+                    <h4>Bio</h4>
+                    <textarea id="adm-bio" placeholder="Bio…"></textarea>
+                    <button class="adm-btn ghost" id="adm-bio-save">Sauvegarder la bio</button>
+
+                    <h4>Passions (séparées par virgule)</h4>
+                    <textarea id="adm-passions" placeholder="🎮 jeux, 📚 lecture…"></textarea>
+                    <button class="adm-btn ghost" id="adm-passions-save">Sauvegarder les passions</button>
+
+                    <h4>Progression</h4>
+                    <button class="adm-btn" id="adm-reset-progress">Réinitialiser la progression</button>
+
+                    <div class="admin-status" id="adm-status"></div>
+                `;
+                document.body.appendChild(p);
+                ADMIN.panel = p;
+
+                const status = p.querySelector("#adm-status");
+                const setStatus = (msg, err) => {
+                    status.textContent = msg;
+                    status.className = "admin-status" + (err ? " error" : "");
+                };
+
+                p.querySelector("#adm-close").addEventListener(
+                    "click",
+                    adminClose,
+                );
+
+                // ---- PRO TOGGLE ----
+                const proBtn = p.querySelector("#adm-pro-toggle");
+                const refreshProBtn = () => {
+                    proBtn.textContent = CURRENT_USER.isPro
+                        ? "Pro: ON  →  désactiver"
+                        : "Pro: OFF  →  activer";
+                };
+                refreshProBtn();
+                proBtn.addEventListener("click", async () => {
+                    const target = !CURRENT_USER.isPro;
+                    try {
+                        CURRENT_USER.isPro = target;
+                        await sb
+                            .from("profiles")
+                            .update({
+                                is_pro: target,
+                                updated_at: new Date().toISOString(),
+                            })
+                            .eq("id", CURRENT_USER.id);
+                        refreshProBtn();
+                        setStatus("Pro → " + (target ? "ON" : "OFF"));
+                        if (state.activeTab === "profile") renderProfile();
+                    } catch (e) {
+                        setStatus("Erreur: " + (e.message || e), true);
+                    }
+                });
+
+                // ---- DM USER LIST ----
+                const sel = p.querySelector("#adm-dm-user");
+                try {
+                    const { data, error } = await sb
+                        .from("profiles")
+                        .select("id, name")
+                        .neq("id", CURRENT_USER.id)
+                        .order("name", { ascending: true })
+                        .limit(500);
+                    if (error) throw error;
+                    sel.innerHTML =
+                        '<option value="">— choisir un utilisateur —</option>';
+                    (data || []).forEach((u) => {
+                        const o = document.createElement("option");
+                        o.value = u.id;
+                        o.textContent = u.name || "(sans nom)";
+                        sel.appendChild(o);
+                    });
+                } catch (e) {
+                    sel.innerHTML =
+                        '<option value="">erreur: ' +
+                        (e.message || e) +
+                        "</option>";
+                }
+                p.querySelector("#adm-dm-send").addEventListener(
+                    "click",
+                    async () => {
+                        const otherId = sel.value;
+                        const txtEl = p.querySelector("#adm-dm-text");
+                        const text = (txtEl.value || "").trim();
+                        if (!otherId)
+                            return setStatus("Choisis un utilisateur", true);
+                        if (!text) return setStatus("Message vide", true);
+                        try {
+                            const { error } = await sb
+                                .from("messages")
+                                .insert({
+                                    sender_id: CURRENT_USER.id,
+                                    recipient_id: otherId,
+                                    content: text,
+                                });
+                            if (error) throw error;
+                            txtEl.value = "";
+                            setStatus("DM envoyé ✔");
+                        } catch (e) {
+                            setStatus("Erreur: " + (e.message || e), true);
+                        }
+                    },
+                );
+
+                // ---- USERNAME ----
+                const nameInput = p.querySelector("#adm-name");
+                nameInput.value = CURRENT_USER.name || "";
+                p.querySelector("#adm-name-save").addEventListener(
+                    "click",
+                    async () => {
+                        const v = nameInput.value.trim();
+                        try {
+                            const { error } = await sb
+                                .from("profiles")
+                                .update({
+                                    name: v || null,
+                                    updated_at: new Date().toISOString(),
+                                })
+                                .eq("id", CURRENT_USER.id);
+                            if (error) throw error;
+                            CURRENT_USER.name = v;
+                            setStatus("Nom mis à jour ✔");
+                            if (state.activeTab === "profile") renderProfile();
+                        } catch (e) {
+                            setStatus("Erreur: " + (e.message || e), true);
+                        }
+                    },
+                );
+
+                // ---- BIO ----
+                const bioInput = p.querySelector("#adm-bio");
+                bioInput.value = CURRENT_USER.tagline || "";
+                p.querySelector("#adm-bio-save").addEventListener(
+                    "click",
+                    async () => {
+                        const v = bioInput.value.trim();
+                        try {
+                            const { error } = await sb
+                                .from("profiles")
+                                .update({
+                                    tagline: v || null,
+                                    updated_at: new Date().toISOString(),
+                                })
+                                .eq("id", CURRENT_USER.id);
+                            if (error) throw error;
+                            CURRENT_USER.tagline = v;
+                            setStatus("Bio mise à jour ✔");
+                            if (state.activeTab === "profile") renderProfile();
+                        } catch (e) {
+                            setStatus("Erreur: " + (e.message || e), true);
+                        }
+                    },
+                );
+
+                // ---- PASSIONS ----
+                const pasInput = p.querySelector("#adm-passions");
+                pasInput.value = (CURRENT_USER.passions || []).join(", ");
+                p.querySelector("#adm-passions-save").addEventListener(
+                    "click",
+                    async () => {
+                        const arr = pasInput.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .slice(0, 8);
+                        try {
+                            const { error } = await sb
+                                .from("profiles")
+                                .update({
+                                    passions: arr,
+                                    updated_at: new Date().toISOString(),
+                                })
+                                .eq("id", CURRENT_USER.id);
+                            if (error) throw error;
+                            CURRENT_USER.passions = arr;
+                            setStatus(
+                                "Passions mises à jour ✔ (" +
+                                    arr.length +
+                                    ")",
+                            );
+                            if (state.activeTab === "profile") renderProfile();
+                        } catch (e) {
+                            setStatus("Erreur: " + (e.message || e), true);
+                        }
+                    },
+                );
+
+                // ---- RESET PROGRESS ----
+                p.querySelector("#adm-reset-progress").addEventListener(
+                    "click",
+                    async () => {
+                        if (
+                            !confirm(
+                                "Réinitialiser la progression ? (vide nom, bio, ville, passions)",
+                            )
+                        )
+                            return;
+                        try {
+                            const { error } = await sb
+                                .from("profiles")
+                                .update({
+                                    name: null,
+                                    tagline: null,
+                                    city: null,
+                                    passions: [],
+                                    updated_at: new Date().toISOString(),
+                                })
+                                .eq("id", CURRENT_USER.id);
+                            if (error) throw error;
+                            CURRENT_USER.name = "";
+                            CURRENT_USER.tagline = "";
+                            CURRENT_USER.city = "";
+                            CURRENT_USER.passions = [];
+                            nameInput.value = "";
+                            bioInput.value = "";
+                            pasInput.value = "";
+                            setStatus("Progression réinitialisée ✔");
+                            if (state.activeTab === "profile") renderProfile();
+                        } catch (e) {
+                            setStatus("Erreur: " + (e.message || e), true);
+                        }
+                    },
+                );
             }
 
             function dbgRefreshState() {
