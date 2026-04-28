@@ -5452,6 +5452,322 @@ Output strictly in this XML structure, nothing else:
                 },
             ];
 
+            // ----------------------------------------------------------
+            // VOICE-TURN: pipelined LLM + TTS streaming via /voice-turn
+            // Plays audio chunks as they arrive (MediaSource API).
+            // Returns: full reply text (resolved when LLM finishes).
+            // Audio playback continues async in background until end of stream.
+            // ----------------------------------------------------------
+            async function voiceTurnStream(messages, systemPrompt) {
+                const t0 = performance.now();
+                const fullMessages = [
+                    { role: "system", content: systemPrompt },
+                    ...messages,
+                ];
+                dbgLog("chat", `→ POST ${VOICE_TURN_URL}`, {
+                    msgCount: fullMessages.length,
+                });
+
+                // Setup MediaSource for streaming MP3 playback
+                let mediaSource, audio, sourceBuffer;
+                const pending = []; // queued Uint8Array chunks
+                let mseEnded = false;
+                let appending = false;
+
+                const tryAppend = () => {
+                    if (
+                        !sourceBuffer ||
+                        sourceBuffer.updating ||
+                        appending ||
+                        pending.length === 0
+                    )
+                        return;
+                    appending = true;
+                    try {
+                        sourceBuffer.appendBuffer(pending.shift());
+                    } catch (e) {
+                        appending = false;
+                        dbgLog("error", "sourceBuffer.append", e.message);
+                    }
+                };
+
+                const mseReady = new Promise((resolve, reject) => {
+                    try {
+                        if (
+                            !window.MediaSource ||
+                            !MediaSource.isTypeSupported("audio/mpeg")
+                        ) {
+                            return reject(
+                                new Error("MediaSource audio/mpeg unsupported"),
+                            );
+                        }
+                        mediaSource = new MediaSource();
+                        audio = new Audio();
+                        audio.src = URL.createObjectURL(mediaSource);
+                        mediaSource.addEventListener(
+                            "sourceopen",
+                            () => {
+                                try {
+                                    sourceBuffer =
+                                        mediaSource.addSourceBuffer(
+                                            "audio/mpeg",
+                                        );
+                                    sourceBuffer.addEventListener(
+                                        "updateend",
+                                        () => {
+                                            appending = false;
+                                            if (pending.length > 0) {
+                                                tryAppend();
+                                            } else if (
+                                                mseEnded &&
+                                                mediaSource.readyState ===
+                                                    "open"
+                                            ) {
+                                                try {
+                                                    mediaSource.endOfStream();
+                                                } catch (_) {}
+                                            }
+                                        },
+                                    );
+                                    resolve();
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            },
+                            { once: true },
+                        );
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+
+                let mseSupported = true;
+                try {
+                    await mseReady;
+                } catch (e) {
+                    dbgLog(
+                        "error",
+                        "MediaSource init failed, falling back",
+                        e.message,
+                    );
+                    mseSupported = false;
+                }
+
+                // Cancel any in-flight Amber audio (user just said something).
+                if (VOICE.currentAudio) {
+                    try {
+                        VOICE.currentAudio.pause();
+                    } catch (_) {}
+                    VOICE.currentAudio = null;
+                }
+                if (mseSupported) VOICE.currentAudio = audio;
+
+                // Pause mic during Amber's speech (echo prevention).
+                stopListening();
+                setVCStatus("Amber réfléchit…");
+
+                if (mseSupported) {
+                    audio.onended = () => {
+                        if (VOICE.currentAudio === audio)
+                            VOICE.currentAudio = null;
+                        stopVisualizer();
+                        if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                    };
+                    audio.onerror = () => {
+                        if (VOICE.currentAudio === audio)
+                            VOICE.currentAudio = null;
+                        stopVisualizer();
+                        if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                    };
+                }
+
+                // Fallback buffer (used if MSE unsupported)
+                const fallbackChunks = [];
+
+                let res;
+                const ac = new AbortController();
+                if (VOICE.currentVoiceTurnAbort) {
+                    try {
+                        VOICE.currentVoiceTurnAbort.abort();
+                    } catch (_) {}
+                }
+                VOICE.currentVoiceTurnAbort = ac;
+                try {
+                    res = await fetch(VOICE_TURN_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            messages: fullMessages,
+                            model: "gemini-3-flash-preview",
+                            voice: VOICE.ttsVoice,
+                        }),
+                        signal: ac.signal,
+                    });
+                } catch (e) {
+                    if (e.name === "AbortError") {
+                        dbgLog("chat", "voice-turn aborted (barge-in)");
+                        return "";
+                    }
+                    dbgLog("error", "voice-turn fetch threw", e.message);
+                    return "Oups, je n'arrive pas à répondre. Détails: " + e.message;
+                }
+                if (!res.ok || !res.body) {
+                    const errBody = await res.text().catch(() => "");
+                    dbgLog(
+                        "error",
+                        `voice-turn HTTP ${res.status}`,
+                        errBody.slice(0, 200),
+                    );
+                    return "Oups, je n'arrive pas à répondre.";
+                }
+
+                let firstAudio = true;
+                let fullText = "";
+                const reader = res.body.getReader();
+                const dec = new TextDecoder();
+                let buf = "";
+
+                const handleEvent = async (event, dataStr) => {
+                    if (event === "text") {
+                        try {
+                            const obj = JSON.parse(dataStr);
+                            fullText += obj.chunk || "";
+                        } catch (_) {}
+                    } else if (event === "audio") {
+                        // dataStr = raw base64 (no JSON wrapping)
+                        let bytes;
+                        try {
+                            const bin = atob(dataStr);
+                            bytes = new Uint8Array(bin.length);
+                            for (let i = 0; i < bin.length; i++)
+                                bytes[i] = bin.charCodeAt(i);
+                        } catch (e) {
+                            dbgLog("error", "b64 decode", e.message);
+                            return;
+                        }
+                        if (firstAudio) {
+                            firstAudio = false;
+                            const dt = Math.round(performance.now() - t0);
+                            dbgLog("tts", `first audio (${dt}ms)`);
+                            setVCStatus("Amber parle…");
+                            if (mseSupported) {
+                                attachVisualizer(audio);
+                                try {
+                                    await audio.play();
+                                } catch (e) {
+                                    dbgLog(
+                                        "error",
+                                        "audio.play threw",
+                                        e.message,
+                                    );
+                                }
+                            }
+                        }
+                        if (mseSupported) {
+                            pending.push(bytes);
+                            tryAppend();
+                        } else {
+                            fallbackChunks.push(bytes);
+                        }
+                    } else if (event === "done") {
+                        try {
+                            const obj = JSON.parse(dataStr);
+                            if (obj.text) fullText = obj.text;
+                        } catch (_) {}
+                    } else if (event === "error") {
+                        dbgLog("error", "voice-turn server", dataStr);
+                    }
+                };
+
+                while (true) {
+                    let result;
+                    try {
+                        result = await reader.read();
+                    } catch (e) {
+                        if (e.name === "AbortError") {
+                            dbgLog("chat", "voice-turn read aborted");
+                            break;
+                        }
+                        throw e;
+                    }
+                    const { done, value } = result;
+                    if (done) break;
+                    buf += dec.decode(value, { stream: true });
+                    let sep;
+                    while ((sep = buf.indexOf("\n\n")) !== -1) {
+                        const evt = buf.slice(0, sep);
+                        buf = buf.slice(sep + 2);
+                        const lines = evt.split("\n");
+                        let event = "message";
+                        let data = "";
+                        for (const line of lines) {
+                            if (line.startsWith("event: "))
+                                event = line.slice(7).trim();
+                            else if (line.startsWith("data: "))
+                                data += (data ? "\n" : "") + line.slice(6);
+                        }
+                        await handleEvent(event, data);
+                    }
+                }
+                if (VOICE.currentVoiceTurnAbort === ac)
+                    VOICE.currentVoiceTurnAbort = null;
+
+                // Stream finished — close MediaSource cleanly
+                mseEnded = true;
+                if (mseSupported) {
+                    const finalize = () => {
+                        if (
+                            !sourceBuffer ||
+                            mediaSource.readyState !== "open"
+                        )
+                            return;
+                        if (sourceBuffer.updating || pending.length > 0) {
+                            setTimeout(finalize, 50);
+                            return;
+                        }
+                        try {
+                            mediaSource.endOfStream();
+                        } catch (_) {}
+                    };
+                    finalize();
+                } else {
+                    // Fallback: download all chunks as one blob, play normally
+                    if (fallbackChunks.length) {
+                        const total = fallbackChunks.reduce(
+                            (a, b) => a + b.length,
+                            0,
+                        );
+                        const all = new Uint8Array(total);
+                        let off = 0;
+                        for (const c of fallbackChunks) {
+                            all.set(c, off);
+                            off += c.length;
+                        }
+                        const blob = new Blob([all], { type: "audio/mpeg" });
+                        const url = URL.createObjectURL(blob);
+                        const a = new Audio(url);
+                        VOICE.currentAudio = a;
+                        a.onended = () => {
+                            URL.revokeObjectURL(url);
+                            if (VOICE.currentAudio === a)
+                                VOICE.currentAudio = null;
+                            stopVisualizer();
+                            if (VOICE.chatMode) setVCStatus("Je t'écoute…");
+                        };
+                        attachVisualizer(a);
+                        try {
+                            await a.play();
+                        } catch (_) {}
+                    }
+                }
+
+                const totalDt = Math.round(performance.now() - t0);
+                dbgLog("chat", `voice-turn done (${totalDt}ms)`, {
+                    len: fullText.length,
+                });
+                return fullText.trim() || "…";
+            }
+
             async function callGPT(messages, systemPrompt) {
                 const t0 = performance.now();
                 dbgLog("chat", `→ POST ${WORKER_URL}`, {
@@ -5788,10 +6104,32 @@ Output strictly in this XML structure, nothing else:
                     role: m.from === "user" ? "user" : "assistant",
                     content: Array.isArray(m.text) ? m.text.join(" ") : m.text,
                 }));
-                const reply = await callGPT(
-                    gptMessages,
-                    await neuronSystemPrompt(),
-                );
+
+                let reply;
+                if (VOICE.chatMode) {
+                    // Voicechat: pipelined LLM→TTS via /voice-turn (streaming).
+                    // Audio starts playing ~1s after request, while LLM still
+                    // generating. Returns final text only when done.
+
+                    // Trim history: keep last 10 messages. Less context = faster
+                    // LLM time-to-first-token (~100-300ms saved on long chats).
+                    const trimmed = gptMessages.slice(-10);
+
+                    // Voice-mode behavioral suffix: forces brief, oral-style
+                    // replies. Shorter outputs = less LLM time AND less TTS time.
+                    const voiceSuffix =
+                        "\n\nMODE VOCAL — Tu réponds à l'oral. Réponds en 1 à 3 phrases courtes, naturelles, conversationnelles. " +
+                        "Pas de listes, pas de markdown, pas d'énumérations. Pas de smileys ni d'emojis. " +
+                        "Va droit au but. Si la question demande une longue réponse, propose plutôt un résumé court et invite l'utilisateur à demander plus de détails.";
+                    const sysPrompt = (await neuronSystemPrompt()) + voiceSuffix;
+
+                    reply = await voiceTurnStream(trimmed, sysPrompt);
+                } else {
+                    reply = await callGPT(
+                        gptMessages,
+                        await neuronSystemPrompt(),
+                    );
+                }
 
                 hideNeuronTyping();
                 setBrandNeuronState("is-thinking", false);
@@ -5815,7 +6153,9 @@ Output strictly in this XML structure, nothing else:
                     len: reply.length,
                     synapse: !!synapse,
                 });
-                speakAmber(reply);
+                // In voicechat mode, audio is already playing/done from
+                // voiceTurnStream — skip the second TTS call.
+                if (!VOICE.chatMode) speakAmber(reply);
                 flashNeuronState(
                     document.getElementById("brand-mascot"),
                     "is-sending",
@@ -6847,6 +7187,8 @@ Output strictly in this XML structure, nothing else:
    VOICE — STT (ElevenLabs Scribe) + TTS (ElevenLabs) + Gemini in voicechat
 ================================================================= */
             const TTS_URL = WORKER_URL.replace(/\/$/, "") + "/tts";
+            const VOICE_TURN_URL =
+                WORKER_URL.replace(/\/$/, "") + "/voice-turn";
 
             const VOICE = {
                 sttSupported: false,
@@ -6865,12 +7207,13 @@ Output strictly in this XML structure, nothing else:
                 speechDetected: false,
                 silenceStart: 0,
                 utteranceStart: 0,
-                // VAD tunables
+                // VAD tunables (tuned for low latency)
                 vadThreshold: 0.025, // RMS threshold for "speaking"
-                vadSilenceMs: 1100, // ms of silence ends utterance
-                minUtteranceMs: 400, // shorter = ignored
+                vadSilenceMs: 750, // ms of silence ends utterance (was 1100)
+                minUtteranceMs: 250, // shorter = ignored (was 400)
                 maxUtteranceMs: 15000, // safety cutoff
                 currentAudio: null,
+                currentVoiceTurnAbort: null, // AbortController for in-flight /voice-turn (barge-in)
                 ttsVoice: "WeAAwKYcS06VmXw086yZ",
                 // Voicechat mode state
                 chatMode: false,
@@ -7150,6 +7493,14 @@ Output strictly in this XML structure, nothing else:
                             VOICE.currentAudio.pause();
                         } catch (_) {}
                         VOICE.currentAudio = null;
+                        // Also abort any in-flight /voice-turn stream so we
+                        // don't keep paying for LLM/TTS bytes the user won't hear.
+                        if (VOICE.currentVoiceTurnAbort) {
+                            try {
+                                VOICE.currentVoiceTurnAbort.abort();
+                            } catch (_) {}
+                            VOICE.currentVoiceTurnAbort = null;
+                        }
                         stopVisualizer();
                         dbgLog("stt", "▶ barge-in");
                     }
@@ -7197,7 +7548,7 @@ Output strictly in this XML structure, nothing else:
                         dbgLog("stt", "■ max length, finalize");
                         finalizeUtterance();
                     }
-                }, 60);
+                }, 40); // 40ms = 25Hz VAD tick. Faster speech-end detection.
             }
 
             async function finalizeUtterance() {
@@ -7342,6 +7693,18 @@ Output strictly in this XML structure, nothing else:
                 if (micLbl) micLbl.textContent = "Micro";
                 setVCStatus("Activation du micro…");
                 ensureAudioCtx();
+
+                // Pre-warm: open a TLS handshake to the worker now (in parallel
+                // with mic startup) so the first /voice-turn call doesn't
+                // pay handshake cost. Fire-and-forget HEAD/GET → CORS preflight.
+                // Cloudflare answers OPTIONS in ~10ms, keeps TLS pooled.
+                try {
+                    fetch(VOICE_TURN_URL, {
+                        method: "OPTIONS",
+                        headers: { "Content-Type": "application/json" },
+                    }).catch(() => {});
+                } catch (_) {}
+
                 const ok = await startMicPipeline();
                 if (ok) setVCStatus("Je t'écoute…");
             }
