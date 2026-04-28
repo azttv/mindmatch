@@ -5467,10 +5467,16 @@ Output strictly in this XML structure, nothing else:
                         { role: "system", content: systemPrompt },
                         ...messages,
                     ];
+                    // Voicechat mode → route to Gemini for lower latency.
+                    // Default chat → OpenAI (worker decides based on `model` field).
+                    const reqBody = { messages: fullMessages };
+                    if (VOICE.chatMode) {
+                        reqBody.model = "gemini-3-flash-preview";
+                    }
                     const res = await fetch(WORKER_URL, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ messages: fullMessages }),
+                        body: JSON.stringify(reqBody),
                     });
                     const dt = Math.round(performance.now() - t0);
                     if (!res.ok) {
@@ -6838,7 +6844,7 @@ Output strictly in this XML structure, nothing else:
                 if (tab === "profile") renderProfile();
             }
             /* =================================================================
-   VOICE — STT (Web Speech API) + TTS (OpenAI via worker) + voicechat mode
+   VOICE — STT (ElevenLabs Scribe) + TTS (ElevenLabs) + Gemini in voicechat
 ================================================================= */
             const TTS_URL = WORKER_URL.replace(/\/$/, "") + "/tts";
 
@@ -6983,8 +6989,8 @@ Output strictly in this XML structure, nothing else:
             }
 
             // =========================================================
-            // STT PIPELINE — MediaRecorder → /stt (OpenAI Whisper)
-            // Replaces Web Speech API. Works on Firefox too. No Google.
+            // STT PIPELINE — MediaRecorder → /stt (ElevenLabs Scribe)
+            // Works on Firefox too. Returns { text } same as Whisper did.
             // =========================================================
             const STT_URL = WORKER_URL.replace(/\/$/, "") + "/stt";
 
@@ -7201,7 +7207,7 @@ Output strictly in this XML structure, nothing else:
                 }
 
                 const mime =
-                    VOICE.recorder.mimeType || chunks[0].type || "audio/webm";
+                    VOICE.recorder.mimeType || chunks[0].type || "audio/wav";
                 const blob = new Blob(chunks, { type: mime });
                 dbgLog("stt", "→ POST /stt", {
                     size: blob.size,
@@ -7214,7 +7220,7 @@ Output strictly in this XML structure, nothing else:
                         ? "mp4"
                         : /ogg/.test(mime)
                           ? "ogg"
-                          : "webm";
+                          : "wav";
                     fd.append("file", blob, "audio." + ext);
                     const r = await fetch(STT_URL, {
                         method: "POST",
@@ -9929,10 +9935,10 @@ Output strictly in this XML structure, nothing else:
                     accept: ".xml,application/xml,text/xml",
                     style: "display:none",
                 });
-                const fileBtn = el(
-                    "button",
-                    { class: "import-file-btn", type: "button" },
-                );
+                const fileBtn = el("button", {
+                    class: "import-file-btn",
+                    type: "button",
+                });
                 fileBtn.innerHTML =
                     '<i class="fa-solid fa-file-arrow-up"></i> Importer un fichier .xml';
                 fileBtn.addEventListener("click", () => fileInput.click());
@@ -10574,13 +10580,11 @@ Output strictly in this XML structure, nothing else:
                             return setStatus("Choisis un utilisateur", true);
                         if (!text) return setStatus("Message vide", true);
                         try {
-                            const { error } = await sb
-                                .from("messages")
-                                .insert({
-                                    sender_id: CURRENT_USER.id,
-                                    recipient_id: otherId,
-                                    content: text,
-                                });
+                            const { error } = await sb.from("messages").insert({
+                                sender_id: CURRENT_USER.id,
+                                recipient_id: otherId,
+                                content: text,
+                            });
                             if (error) throw error;
                             txtEl.value = "";
                             setStatus("DM envoyé ✔");
@@ -10662,9 +10666,7 @@ Output strictly in this XML structure, nothing else:
                             if (error) throw error;
                             CURRENT_USER.passions = arr;
                             setStatus(
-                                "Passions mises à jour ✔ (" +
-                                    arr.length +
-                                    ")",
+                                "Passions mises à jour ✔ (" + arr.length + ")",
                             );
                             if (state.activeTab === "profile") renderProfile();
                         } catch (e) {
