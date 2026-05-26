@@ -4110,6 +4110,380 @@
                     transform: translate(-50%, 0);
                 }
             }
+
+            /* =================================================================
+               INTEGRATIONS PAGE (settings → Intégrations)
+            ================================================================= */
+            .integ-page {
+                position: relative;
+                padding: 4px 2px 0;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                min-height: 100%;
+            }
+            .integ-intro {
+                color: var(--text-muted);
+                font-size: 13.5px;
+                line-height: 1.55;
+                margin: 0 4px;
+            }
+            .integ-section-title {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: var(--text-muted);
+                font-weight: 600;
+                margin: 6px 4px 0;
+            }
+            /* SELECT DROPDOWN */
+            .integ-select-wrap {
+                position: relative;
+            }
+            .integ-select {
+                width: 100%;
+                padding: 14px 38px 14px 14px;
+                border-radius: 12px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                color: var(--text);
+                font-size: 14px;
+                font-family: inherit;
+                font-weight: 500;
+                appearance: none;
+                -webkit-appearance: none;
+                cursor: pointer;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            .integ-select:focus,
+            .integ-select:hover {
+                border-color: var(--accent);
+            }
+            .integ-select option,
+            .integ-select optgroup {
+                background: var(--bg);
+                color: var(--text);
+            }
+            .integ-select-wrap::after {
+                content: "\f078";
+                font-family: "Font Awesome 6 Free";
+                font-weight: 900;
+                position: absolute;
+                right: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-muted);
+                pointer-events: none;
+                font-size: 12px;
+            }
+            .integ-empty-state {
+                padding: 40px 20px;
+                text-align: center;
+                color: var(--text-muted);
+                font-size: 13.5px;
+                line-height: 1.6;
+                background: var(--surface);
+                border: 1px dashed var(--border);
+                border-radius: 14px;
+            }
+            .integ-empty-state i {
+                display: block;
+                font-size: 32px;
+                margin-bottom: 12px;
+                color: var(--text-faint);
+            }
+            /* STICKY IMPORT BAR */
+            .integ-sticky-bar {
+                position: sticky;
+                bottom: calc((var(--safe-bottom) + 20px) * -1);
+                left: 0;
+                right: 0;
+                margin: 24px -16px calc((var(--safe-bottom) + 20px) * -1);
+                padding: 14px 16px calc(var(--safe-bottom) + 14px);
+                background: rgba(13, 13, 20, 0.96);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                border-top: 1px solid var(--border);
+                z-index: 5;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .integ-sticky-bar .integ-btn.primary {
+                box-shadow: 0 8px 22px rgba(124, 94, 247, 0.4);
+            }
+            .integ-page-scroll {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            /* DETAIL PAGE */
+            .integ-detail {
+                padding: 4px 2px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .integ-detail-head {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 4px;
+            }
+            .integ-detail-head .integ-icon {
+                width: 52px;
+                height: 52px;
+                display: grid;
+                place-items: center;
+                border-radius: 14px;
+                font-size: 24px;
+                flex-shrink: 0;
+            }
+            .integ-detail-head h2 {
+                margin: 0 0 4px;
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+            }
+            .integ-detail-head .integ-detail-sub {
+                margin: 0;
+                font-size: 13px;
+                color: var(--text-muted);
+                line-height: 1.4;
+            }
+            .integ-state-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 10px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                color: var(--text-muted);
+                width: fit-content;
+            }
+            .integ-state-pill.connected {
+                background: rgba(74, 222, 128, 0.12);
+                border-color: rgba(74, 222, 128, 0.45);
+                color: #4ade80;
+            }
+            .integ-state-pill i {
+                font-size: 9px;
+            }
+
+            .integ-method-tabs {
+                display: flex;
+                gap: 6px;
+                padding: 4px;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+            }
+            .integ-method-tab {
+                flex: 1;
+                padding: 9px 10px;
+                border-radius: 8px;
+                background: transparent;
+                color: var(--text-muted);
+                border: none;
+                font-size: 12.5px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.15s, color 0.15s;
+                font-family: inherit;
+            }
+            .integ-method-tab.active {
+                background: var(--surface);
+                color: var(--text);
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            }
+
+            .integ-method-pane {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 14px 14px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .integ-pane-title {
+                font-size: 13px;
+                font-weight: 600;
+                margin: 0;
+            }
+            .integ-pane-desc {
+                font-size: 12.5px;
+                color: var(--text-muted);
+                margin: 0;
+                line-height: 1.5;
+            }
+            .integ-guide-list {
+                counter-reset: step;
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .integ-guide-list li {
+                counter-increment: step;
+                position: relative;
+                padding: 8px 10px 8px 36px;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                font-size: 12.5px;
+                color: var(--text);
+                line-height: 1.5;
+            }
+            .integ-guide-list li::before {
+                content: counter(step);
+                position: absolute;
+                left: 8px;
+                top: 8px;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: var(--gradient);
+                color: #fff;
+                font-size: 11px;
+                font-weight: 700;
+                display: grid;
+                place-items: center;
+            }
+            .integ-guide-list code {
+                background: rgba(0, 0, 0, 0.4);
+                padding: 1px 6px;
+                border-radius: 4px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 11.5px;
+                color: #c9cfe1;
+                word-break: break-all;
+            }
+            .integ-guide-list a {
+                color: var(--accent-2);
+                text-decoration: underline;
+                text-underline-offset: 2px;
+            }
+            .integ-input {
+                width: 100%;
+                padding: 11px 13px;
+                border-radius: 10px;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                color: var(--text);
+                font-size: 13px;
+                font-family: inherit;
+                box-sizing: border-box;
+            }
+            .integ-input:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+            .integ-input-label {
+                font-size: 11.5px;
+                color: var(--text-muted);
+                font-weight: 600;
+                margin: 0 0 -6px 2px;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            .integ-btn {
+                width: 100%;
+                padding: 12px 16px;
+                border-radius: 12px;
+                border: none;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: inherit;
+                transition: opacity 0.15s, transform 0.1s;
+            }
+            .integ-btn.primary {
+                background: var(--gradient);
+                color: #fff;
+                box-shadow: 0 6px 16px rgba(124, 94, 247, 0.32);
+            }
+            .integ-btn.primary:hover:not(:disabled) {
+                opacity: 0.93;
+            }
+            .integ-btn.primary:active:not(:disabled) {
+                transform: scale(0.99);
+            }
+            .integ-btn.ghost {
+                background: var(--surface-2);
+                color: var(--text);
+                border: 1px solid var(--border);
+            }
+            .integ-btn.danger {
+                background: transparent;
+                color: var(--danger);
+                border: 1px solid rgba(247, 79, 110, 0.4);
+            }
+            .integ-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .integ-file-drop {
+                width: 100%;
+                padding: 18px 14px;
+                border-radius: 12px;
+                border: 1.5px dashed rgba(255, 255, 255, 0.18);
+                background: rgba(0, 0, 0, 0.25);
+                color: var(--text);
+                font-size: 13px;
+                text-align: center;
+                cursor: pointer;
+                transition: border-color 0.15s, background 0.15s;
+                font-family: inherit;
+            }
+            .integ-file-drop:hover {
+                border-color: var(--accent);
+                background: rgba(79, 110, 247, 0.08);
+            }
+            .integ-file-drop i {
+                color: var(--accent);
+                margin-right: 6px;
+            }
+            .integ-status {
+                font-size: 12.5px;
+                color: var(--text-muted);
+                min-height: 16px;
+                text-align: center;
+            }
+            .integ-status.ok {
+                color: #4ade80;
+            }
+            .integ-status.error {
+                color: #ff6b6b;
+            }
+            .integ-connected-summary {
+                background: rgba(74, 222, 128, 0.08);
+                border: 1px solid rgba(74, 222, 128, 0.3);
+                border-radius: 12px;
+                padding: 12px 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .integ-connected-summary .label {
+                font-size: 11px;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            .integ-connected-summary .value {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text);
+                word-break: break-all;
+            }
         </style>
     </head>
     <body>
@@ -5451,6 +5825,714 @@ Output strictly in this XML structure, nothing else:
                     qParam: "q",
                 },
             ];
+
+            /* =================================================================
+   INTEGRATIONS — connect external services to enrich profile
+================================================================= */
+            // Redirect URI used by all OAuth flows (current page, no query/hash)
+            const INTEG_REDIRECT_URI =
+                window.location.origin + window.location.pathname;
+
+            const INTEGRATIONS = [
+                // --- MUSIC ---
+                {
+                    id: "spotify",
+                    name: "Spotify",
+                    category: "Musique",
+                    icon: "fa-brands fa-spotify",
+                    color: "#1DB954",
+                    summary:
+                        "Top artistes, titres récents, playlists et bibliothèque.",
+                    methods: ["oauth", "file"],
+                    oauth: {
+                        flow: "pkce",
+                        authUrl: "https://accounts.spotify.com/authorize",
+                        tokenUrl: "https://accounts.spotify.com/api/token",
+                        scope: "user-read-private user-read-email user-top-read user-read-recently-played user-library-read playlist-read-private",
+                        needs: ["client_id"],
+                        guide: [
+                            'Ouvre <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a> et connecte-toi avec ton compte Spotify.',
+                            "Clique sur <b>Create app</b>. Mets <b>MindMatch</b> comme nom et <b>usage personnel</b> en description. Coche <b>Web API</b>.",
+                            "Dans le champ <b>Redirect URIs</b>, colle l'URL affichée plus haut sur cette page, puis clique <b>Save</b>.",
+                            "Une fois l'application créée, ouvre-la et copie son <b>Client ID</b>.",
+                            "Reviens dans MindMatch et appuie sur le bouton en bas de l'écran : on te demandera de coller ce Client ID, puis Spotify te demandera d'autoriser l'accès en lecture seule.",
+                        ],
+                    },
+                    file: {
+                        accept: ".zip,.json",
+                        guide: [
+                            'Ouvre <a href="https://www.spotify.com/account/privacy/" target="_blank">spotify.com/account/privacy</a> et connecte-toi.',
+                            "Coche <b>Account data</b> (et <b>Extended streaming history</b> si tu veux 5 ans d'historique).",
+                            "Clique sur <b>Request data</b>. Spotify confirme par email puis t'envoie un second email avec un lien de téléchargement sous quelques jours.",
+                            "Télécharge le fichier ZIP reçu, puis importe-le ici (ou seulement <code>StreamingHistory*.json</code> qu'il contient).",
+                        ],
+                    },
+                },
+                {
+                    id: "deezer",
+                    name: "Deezer",
+                    category: "Musique",
+                    icon: "fa-brands fa-deezer",
+                    color: "#FF0092",
+                    summary: "Favoris, playlists et historique d'écoute.",
+                    methods: ["oauth", "file"],
+                    oauth: {
+                        flow: "implicit",
+                        authUrl: "https://connect.deezer.com/oauth/auth.php",
+                        scope: "basic_access,offline_access,listening_history",
+                        needs: ["app_id"],
+                        guide: [
+                            'Ouvre <a href="https://developers.deezer.com/myapps" target="_blank">developers.deezer.com/myapps</a> et connecte-toi.',
+                            "Clique sur <b>Create a new application</b>. Mets <b>MindMatch</b> en nom et <code>" +
+                                window.location.hostname +
+                                "</code> dans <b>Domaine</b>.",
+                            "Dans <b>Redirect URL after authentication</b>, colle l'URL de redirection affichée sur cette page.",
+                            "Valide la création, puis copie l'<b>Application ID</b> qui s'affiche.",
+                            "Reviens dans MindMatch et appuie sur le bouton en bas de l'écran : on te demandera l'Application ID, puis Deezer t'enverra confirmer l'accès.",
+                        ],
+                    },
+                    file: {
+                        accept: ".json,.csv,.txt",
+                        guide: [
+                            'Ouvre <a href="https://www.deezer.com/account/personal_datas" target="_blank">deezer.com/account/personal_datas</a> et connecte-toi.',
+                            "Demande l'export de tes <b>données personnelles</b>.",
+                            "Tu recevras un email avec un lien de téléchargement (sous quelques jours).",
+                            "Importe ici le fichier <code>listening_history</code> (JSON ou CSV).",
+                        ],
+                    },
+                },
+                {
+                    id: "lastfm",
+                    name: "Last.fm",
+                    category: "Musique",
+                    icon: "fa-brands fa-lastfm",
+                    color: "#D51007",
+                    summary:
+                        "Scrobbles, top artistes/morceaux, tags — via username public.",
+                    methods: ["api", "file"],
+                    api: {
+                        fields: [
+                            {
+                                key: "username",
+                                label: "Nom d'utilisateur Last.fm",
+                                placeholder: "ex : rj",
+                            },
+                            {
+                                key: "api_key",
+                                label: "Clé API Last.fm",
+                                placeholder: "32 caractères",
+                                optional: true,
+                            },
+                        ],
+                        guide: [
+                            "<b>Méthode simple :</b> ton nom d'utilisateur Last.fm suffit pour lire tes scrobbles publics. Il est visible dans l'URL de ton profil : <code>last.fm/user/<b>ton_nom</b></code>.",
+                            '<b>Optionnel</b> — pour des stats détaillées, crée une clé API gratuite sur <a href="https://www.last.fm/api/account/create" target="_blank">last.fm/api/account/create</a> (Nom : MindMatch, Description : usage personnel).',
+                            "Quand tu as ces infos, appuie sur le bouton en bas de l'écran : on te demandera le nom d'utilisateur (et la clé si tu en as une).",
+                            "MindMatch vérifie automatiquement en récupérant tes 50 derniers scrobbles.",
+                        ],
+                    },
+                    file: {
+                        accept: ".csv,.json",
+                        guide: [
+                            'Ouvre <a href="https://lastfm.ghan.nl/export/" target="_blank">lastfm.ghan.nl/export</a> (outil tiers gratuit qui exporte ton historique Last.fm).',
+                            "Saisis ton nom d'utilisateur Last.fm et choisis le format <b>CSV</b> ou <b>JSON</b>.",
+                            "Télécharge le fichier généré, puis importe-le ici.",
+                        ],
+                    },
+                },
+                {
+                    id: "soundcloud",
+                    name: "SoundCloud",
+                    category: "Musique",
+                    icon: "fa-brands fa-soundcloud",
+                    color: "#FF5500",
+                    summary: "Likes, playlists, reposts.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.csv,.json",
+                        guide: [
+                            "L'API SoundCloud n'accepte plus de nouvelles inscriptions développeur depuis 2021 : il faut donc passer par l'export officiel.",
+                            'Ouvre <a href="https://soundcloud.com/settings/account#data" target="_blank">soundcloud.com/settings/account</a>, onglet <b>Data download</b>.',
+                            "Clique sur <b>Request data download</b>. Tu reçois un email contenant un lien vers un ZIP (sous 7 à 14 jours).",
+                            "Télécharge ce ZIP (il contient likes.csv, playlists.csv, reposts.csv, etc.) puis importe-le ici.",
+                        ],
+                    },
+                },
+                {
+                    id: "applemusic",
+                    name: "Apple Music",
+                    category: "Musique",
+                    icon: "fa-brands fa-apple",
+                    color: "#FA243C",
+                    summary: "Bibliothèque, historique d'écoute, playlists.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".csv,.xml,.json,.zip",
+                        guide: [
+                            "L'API MusicKit nécessite un compte Apple Developer payant (99 €/an). On passe donc par l'export officiel de tes données.",
+                            'Ouvre <a href="https://privacy.apple.com" target="_blank">privacy.apple.com</a> et connecte-toi avec ton Apple ID.',
+                            "Choisis <b>Request a copy of your data</b>, puis coche <b>Apple Media Services information</b>.",
+                            "Apple prépare l'archive sous 7 jours environ et t'envoie un email avec un lien de téléchargement.",
+                            "Importe le ZIP entier via le bouton en bas de l'écran, ou seulement <code>Apple Music - Play History Daily Tracks.csv</code> qu'il contient.",
+                        ],
+                    },
+                },
+                // --- GAMING ---
+                {
+                    id: "steam",
+                    name: "Steam",
+                    category: "Gaming",
+                    icon: "fa-brands fa-steam",
+                    color: "#1B2838",
+                    summary:
+                        "Jeux possédés, temps de jeu, succès — via Steam ID public.",
+                    methods: ["api", "file"],
+                    api: {
+                        fields: [
+                            {
+                                key: "steam_id",
+                                label: "Steam ID 64 bits",
+                                placeholder: "ex: 76561198000000000",
+                            },
+                            {
+                                key: "api_key",
+                                label: "Clé API Steam",
+                                placeholder: "32 caractères hex",
+                            },
+                        ],
+                        guide: [
+                            'Récupère ton <b>SteamID64</b> sur <a href="https://steamid.io" target="_blank">steamid.io</a> en collant l\'URL de ton profil Steam.',
+                            'Demande une clé API sur <a href="https://steamcommunity.com/dev/apikey" target="_blank">steamcommunity.com/dev/apikey</a>. Mets <code>' +
+                                window.location.hostname +
+                                "</code> dans <b>Domain Name</b>.",
+                            "Important : ton profil Steam doit être <b>public</b> (Steam → Edit Profile → Privacy → My profile = Public, Game details = Public), sinon les jeux ne remontent pas.",
+                            "Prépare ton SteamID64 et ta clé API : tu les saisiras via le bouton en bas de l'écran.",
+                        ],
+                    },
+                    file: {
+                        accept: ".json,.csv",
+                        guide: [
+                            'Si tu préfères ne pas utiliser de clé API, exporte ta liste avec <a href="https://lorenzostanco.com/lab/steam/" target="_blank">Steam Library JSON</a> (entre ton SteamID64, génère, télécharge).',
+                            "Importe le fichier obtenu via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                {
+                    id: "xbox",
+                    name: "Xbox",
+                    category: "Gaming",
+                    icon: "fa-brands fa-xbox",
+                    color: "#107C10",
+                    summary: "Jeux, succès, temps de jeu.",
+                    methods: ["api", "file"],
+                    api: {
+                        fields: [
+                            {
+                                key: "gamertag",
+                                label: "Gamertag Xbox",
+                                placeholder: "ex: MajorNelson",
+                            },
+                            {
+                                key: "openxbl_key",
+                                label: "Clé API OpenXBL",
+                                placeholder: "uuid",
+                            },
+                        ],
+                        guide: [
+                            "L'API Xbox officielle est réservée aux partenaires Microsoft. On passe donc par <b>OpenXBL</b>, un proxy gratuit non officiel mais stable.",
+                            'Ouvre <a href="https://xbl.io" target="_blank">xbl.io</a> et clique <b>Connect with Microsoft</b> avec le compte lié à ton Xbox.',
+                            "Clique sur <b>Generate App Key</b> et copie la clé (un UUID) qui s'affiche.",
+                            "Vérifie aussi que ton profil Xbox a les paramètres <b>Partager mon activité de jeu</b> sur <i>Tout le monde</i>.",
+                            "Prépare ton Gamertag et la clé OpenXBL : tu les saisiras via le bouton en bas de l'écran.",
+                        ],
+                    },
+                    file: {
+                        accept: ".csv,.json,.zip",
+                        guide: [
+                            'Ouvre <a href="https://account.microsoft.com/privacy" target="_blank">account.microsoft.com/privacy</a> et connecte-toi.',
+                            "Va dans <b>Download your data</b> et coche <b>Xbox</b>.",
+                            "Microsoft prépare un fichier sous 30 jours et t'envoie un email avec un lien.",
+                            "Télécharge le ZIP, puis importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                // --- VIDEO ---
+                {
+                    id: "youtube",
+                    name: "YouTube",
+                    category: "Vidéo",
+                    icon: "fa-brands fa-youtube",
+                    color: "#FF0000",
+                    summary: "Likes, abonnements, playlists, historique.",
+                    methods: ["oauth", "file"],
+                    oauth: {
+                        flow: "implicit",
+                        authUrl:
+                            "https://accounts.google.com/o/oauth2/v2/auth",
+                        scope: "https://www.googleapis.com/auth/youtube.readonly",
+                        needs: ["client_id"],
+                        guide: [
+                            'Ouvre <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> et crée un projet nommé <b>MindMatch</b>.',
+                            "Dans <b>APIs & Services → Library</b>, cherche puis active <b>YouTube Data API v3</b>.",
+                            "Toujours dans <b>APIs & Services → OAuth consent screen</b> : choisis <b>External</b>, mets MindMatch comme nom, ajoute ton email en <b>Test user</b>.",
+                            "Dans <b>APIs & Services → Credentials → Create credentials → OAuth client ID</b> : type <b>Web application</b>. <b>Authorized JavaScript origins</b> : <code>" +
+                                window.location.origin +
+                                "</code>. <b>Authorized redirect URIs</b> : colle l'URL de redirection affichée plus haut sur cette page.",
+                            "Copie le <b>Client ID</b> (format <code>xxx.apps.googleusercontent.com</code>) : tu le saisiras via le bouton en bas de l'écran.",
+                        ],
+                    },
+                    file: {
+                        accept: ".zip,.json,.csv,.html",
+                        guide: [
+                            'Ouvre <a href="https://takeout.google.com" target="_blank">takeout.google.com</a> et connecte-toi avec ton compte Google.',
+                            "Clique sur <b>Tout désélectionner</b>, puis coche uniquement <b>YouTube et YouTube Music</b>.",
+                            "Clique sur <b>Étape suivante</b> → format <b>ZIP</b>, fréquence <b>Une seule fois</b> → <b>Créer l'exportation</b>.",
+                            "Tu reçois un email sous quelques minutes (ou heures) avec un lien ZIP. Télécharge-le puis importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                {
+                    id: "netflix",
+                    name: "Netflix",
+                    category: "Vidéo",
+                    icon: "fa-solid fa-clapperboard",
+                    color: "#E50914",
+                    summary: "Historique de visionnage, notes, listes.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".csv",
+                        guide: [
+                            "Netflix ne propose pas d'API publique. La méthode la plus simple est l'export CSV de ton historique.",
+                            'Connecte-toi sur <a href="https://www.netflix.com/viewingactivity" target="_blank">netflix.com/viewingactivity</a>.',
+                            "Tout en bas de la page, clique sur <b>Télécharger tout</b>. Un fichier <code>NetflixViewingHistory.csv</code> est téléchargé immédiatement.",
+                            "Importe ce CSV via le bouton en bas de l'écran.",
+                            "Pour un export plus complet (notes, listes, recherches), passe plutôt par <a href=\"https://www.netflix.com/account/getmyinfo\" target=\"_blank\">netflix.com/account/getmyinfo</a> (compte 30 jours d'attente).",
+                        ],
+                    },
+                },
+                {
+                    id: "letterboxd",
+                    name: "Letterboxd",
+                    category: "Vidéo",
+                    icon: "fa-solid fa-film",
+                    color: "#00C030",
+                    summary: "Films vus, notes, watchlist, critiques.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.csv",
+                        guide: [
+                            "Letterboxd ne propose pas d'API publique stable : on passe par l'export officiel, qui est instantané.",
+                            'Ouvre <a href="https://letterboxd.com/settings/data/" target="_blank">letterboxd.com/settings/data</a> et connecte-toi.',
+                            "Clique sur <b>Export your data</b> : un fichier ZIP est téléchargé immédiatement.",
+                            "Importe ce ZIP entier (recommandé) via le bouton en bas de l'écran. Tu peux aussi importer seulement un des CSV qu'il contient (watched, ratings, reviews, watchlist, diary).",
+                        ],
+                    },
+                },
+                // --- SOCIAL / READ / FORUM ---
+                {
+                    id: "reddit",
+                    name: "Reddit",
+                    category: "Social",
+                    icon: "fa-brands fa-reddit-alien",
+                    color: "#FF4500",
+                    summary: "Subreddits, posts sauvegardés, upvotes.",
+                    methods: ["oauth", "file"],
+                    oauth: {
+                        flow: "implicit",
+                        authUrl:
+                            "https://www.reddit.com/api/v1/authorize",
+                        scope: "identity history mysubreddits read save",
+                        needs: ["client_id"],
+                        guide: [
+                            'Ouvre <a href="https://www.reddit.com/prefs/apps" target="_blank">reddit.com/prefs/apps</a> et, tout en bas, clique sur <b>create another app...</b>.',
+                            "Choisis le type <b>installed app</b> (important : surtout pas <b>web app</b>, qui exigerait un <code>client_secret</code>).",
+                            "Mets <b>MindMatch</b> en nom et, dans <b>redirect uri</b>, colle l'URL de redirection affichée plus haut sur cette page.",
+                            "Valide la création. Le code court qui apparaît juste sous le nom de l'app (et le label <i>installed app</i>) est ton <b>client_id</b>.",
+                            "Garde ce client_id sous la main : tu le saisiras via le bouton en bas de l'écran.",
+                        ],
+                    },
+                    file: {
+                        accept: ".zip,.csv",
+                        guide: [
+                            'Ouvre <a href="https://www.reddit.com/settings/data-request" target="_blank">reddit.com/settings/data-request</a> et connecte-toi.',
+                            "Demande tes données via le formulaire (GDPR si tu es en Europe, CCPA si tu es en Californie, sinon General).",
+                            "Tu reçois un ZIP par email sous environ 30 jours. Il contient saved_posts.csv, votes.csv, posts.csv, comments.csv, subscribed_subreddits.csv, etc.",
+                            "Télécharge ce ZIP, puis importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                {
+                    id: "x",
+                    name: "X (Twitter)",
+                    category: "Social",
+                    icon: "fa-brands fa-x-twitter",
+                    color: "#000000",
+                    summary: "Tweets, likes, follows, listes.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.js,.json",
+                        guide: [
+                            "L'API X v2 n'est presque plus accessible gratuitement (plan Basic à ~100 $/mois minimum). On passe donc par l'archive officielle.",
+                            'Sur X, ouvre <a href="https://x.com/settings/download_your_data" target="_blank">x.com/settings/download_your_data</a>.',
+                            "Saisis ton mot de passe et clique sur <b>Demander l'archive</b>. X t'envoie un code de vérification par email ou SMS à confirmer.",
+                            "Sous 24h, tu reçois un email avec un lien de téléchargement (valable environ 7 jours seulement).",
+                            "Télécharge le ZIP puis importe-le via le bouton en bas de l'écran. Il contient <code>data/tweets.js</code>, <code>like.js</code>, <code>following.js</code>, etc. — MindMatch sait extraire le JSON à l'intérieur.",
+                        ],
+                    },
+                },
+                {
+                    id: "instagram",
+                    name: "Instagram",
+                    category: "Social",
+                    icon: "fa-brands fa-instagram",
+                    color: "#E1306C",
+                    summary: "Posts, likes, abonnements, messages.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.json,.html",
+                        guide: [
+                            "L'API Instagram Basic Display est dépréciée depuis fin 2024. La solution officielle est l'export Meta.",
+                            'Ouvre <a href="https://accountscenter.instagram.com/info_and_permissions/dyi/" target="_blank">accountscenter.instagram.com</a> (Centre de comptes Meta) et connecte-toi.',
+                            "Choisis <b>Télécharger tes informations</b>, sélectionne ton compte Instagram, puis <b>Suivant</b>.",
+                            "Plage de dates : <b>Tous les éléments</b>. Format : <b>JSON</b> (bien plus facile à exploiter que HTML).",
+                            "Soumets la demande. Tu reçois un email avec un lien ZIP sous 24 à 48 h. Télécharge le ZIP, puis importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                {
+                    id: "tiktok",
+                    name: "TikTok",
+                    category: "Social",
+                    icon: "fa-brands fa-tiktok",
+                    color: "#010101",
+                    summary: "Vidéos likées, follows, historique.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.json,.txt",
+                        guide: [
+                            "L'API TikTok Display est réservée aux apps approuvées (process long). On passe donc par l'export utilisateur.",
+                            "Dans l'app TikTok : Profil → ☰ en haut à droite → <b>Paramètres et confidentialité</b> → <b>Compte</b> → <b>Télécharger tes données</b>.",
+                            'Sur navigateur, l\'équivalent est <a href="https://www.tiktok.com/setting/download-your-data" target="_blank">tiktok.com/setting/download-your-data</a>.',
+                            "Choisis le format <b>JSON</b> (recommandé, plus structuré que TXT) puis clique sur <b>Demander les données</b>.",
+                            "Sous 4 jours maximum, retourne sur cet écran pour télécharger le ZIP. Importe-le ensuite via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                // --- HEALTH / SPORT ---
+                {
+                    id: "strava",
+                    name: "Strava",
+                    category: "Sport",
+                    icon: "fa-brands fa-strava",
+                    color: "#FC4C02",
+                    summary: "Activités sportives, performances, segments.",
+                    methods: ["oauth", "file"],
+                    oauth: {
+                        flow: "implicit",
+                        authUrl: "https://www.strava.com/oauth/authorize",
+                        scope: "read,activity:read_all,profile:read_all",
+                        needs: ["client_id"],
+                        guide: [
+                            'Ouvre <a href="https://www.strava.com/settings/api" target="_blank">strava.com/settings/api</a> et connecte-toi.',
+                            "Crée une <b>API Application</b>. Mets <b>MindMatch</b> en nom, <b>Personal</b> en catégorie, laisse <b>Club</b> vide et mets ton domaine en <b>Website</b>.",
+                            "Dans <b>Authorization Callback Domain</b>, mets seulement <code>" +
+                                window.location.hostname +
+                                "</code> (sans <code>https://</code>, sans slash, sans chemin).",
+                            "Ajoute un logo (n'importe quel PNG carré suffit) puis valide.",
+                            "Récupère le <b>Client ID</b> numérique : tu le saisiras via le bouton en bas de l'écran. <i>Note : le flow implicite limite l'accès au scope <code>read</code> seul ; les activités complètes nécessitent un backend.</i>",
+                        ],
+                    },
+                    file: {
+                        accept: ".zip,.csv,.gpx,.tcx,.fit",
+                        guide: [
+                            'Ouvre <a href="https://www.strava.com/athlete/delete_your_account" target="_blank">strava.com/athlete/delete_your_account</a> et connecte-toi.',
+                            "⚠ Ne clique surtout pas sur <b>Delete</b>. Descends à la section <b>Download Request</b> et clique sur <b>Request your archive</b>.",
+                            "Sous environ 24 h, tu reçois un email avec un lien ZIP. Il contient activities.csv et tous les fichiers GPX/TCX/FIT de tes activités.",
+                            "Télécharge le ZIP, puis importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+                {
+                    id: "garmin",
+                    name: "Garmin",
+                    category: "Sport",
+                    icon: "fa-solid fa-heart-pulse",
+                    color: "#000B2D",
+                    summary:
+                        "Activités, sommeil, fréquence cardiaque, poids.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".zip,.csv,.fit,.tcx,.gpx,.json",
+                        guide: [
+                            "L'API Garmin Connect Developer est réservée aux entreprises. La solution officielle pour les particuliers est l'export RGPD.",
+                            'Ouvre <a href="https://www.garmin.com/account/datamanagement/exportdata/" target="_blank">garmin.com/account/datamanagement/exportdata</a> et connecte-toi.',
+                            "Clique sur <b>Request Data Export</b>. Garmin t'envoie un email avec un lien ZIP sous 24 h (valide environ 7 jours).",
+                            "Le ZIP contient summarizedActivities.json, sleepData/, heartRate/, bodyComposition/, etc.",
+                            "Télécharge-le puis importe-le via le bouton en bas de l'écran — tu peux importer le ZIP entier ou un fichier précis.",
+                            'Astuce : pour une seule activité, ouvre-la sur Garmin Connect → engrenage <i class="fa-solid fa-gear"></i> → <b>Exporter en TCX/GPX/FIT</b>, puis importe ce fichier.',
+                        ],
+                    },
+                },
+                // --- READ ---
+                {
+                    id: "kindle",
+                    name: "Kindle Highlights",
+                    category: "Lecture",
+                    icon: "fa-solid fa-book-bookmark",
+                    color: "#FF9900",
+                    summary: "Surlignements et notes de lecture Kindle.",
+                    methods: ["file"],
+                    file: {
+                        accept: ".txt,.csv,.json,.html",
+                        guide: [
+                            "Amazon ne propose pas d'API publique pour les surlignements Kindle. Trois méthodes possibles, choisis la plus pratique :",
+                            "<b>Option A — depuis ton Kindle :</b> branche-le en USB à un ordinateur, ouvre le dossier <code>documents/</code> et copie <code>My Clippings.txt</code>. Ce fichier texte contient tous tes surlignements, de tous tes livres.",
+                            '<b>Option B — depuis le web :</b> ouvre <a href="https://read.amazon.com/notebook" target="_blank">read.amazon.com/notebook</a>, puis sauvegarde la page avec <code>Ctrl+S</code> (format <i>HTML complet</i>). Tu obtiens un fichier .html.',
+                            '<b>Option C — via Readwise :</b> connecte ton compte Amazon Kindle à <a href="https://readwise.io" target="_blank">readwise.io</a>, qui synchronise automatiquement. Ensuite, <b>Export → CSV</b>.',
+                            "Quand tu as ton fichier (TXT, HTML ou CSV), importe-le via le bouton en bas de l'écran.",
+                        ],
+                    },
+                },
+            ];
+
+            // ----- STORAGE HELPERS -----
+            function integStorageKey() {
+                return "mm_integrations_" + (CURRENT_USER.id || "anon");
+            }
+            function integLoadAll() {
+                try {
+                    return (
+                        JSON.parse(
+                            localStorage.getItem(integStorageKey()) || "{}",
+                        ) || {}
+                    );
+                } catch (_) {
+                    return {};
+                }
+            }
+            function integSaveAll(map) {
+                try {
+                    localStorage.setItem(
+                        integStorageKey(),
+                        JSON.stringify(map || {}),
+                    );
+                } catch (_) {}
+            }
+            function integGet(id) {
+                return integLoadAll()[id] || null;
+            }
+            function integSet(id, data) {
+                const all = integLoadAll();
+                all[id] = { ...(all[id] || {}), ...data, updated_at: Date.now() };
+                integSaveAll(all);
+            }
+            function integRemove(id) {
+                const all = integLoadAll();
+                delete all[id];
+                integSaveAll(all);
+            }
+            function integIsConnected(id) {
+                const d = integGet(id);
+                if (!d) return false;
+                return !!(
+                    d.access_token ||
+                    d.username ||
+                    d.steam_id ||
+                    d.gamertag ||
+                    d.file_imported
+                );
+            }
+            function integFindById(id) {
+                return INTEGRATIONS.find((x) => x.id === id) || null;
+            }
+
+            // ----- OAUTH HELPERS -----
+            // PKCE: SHA256(verifier) → base64url
+            async function integPkceChallenge(verifier) {
+                const data = new TextEncoder().encode(verifier);
+                const hash = await crypto.subtle.digest("SHA-256", data);
+                return btoa(String.fromCharCode(...new Uint8Array(hash)))
+                    .replace(/\+/g, "-")
+                    .replace(/\//g, "_")
+                    .replace(/=+$/, "");
+            }
+            function integRandomString(len = 64) {
+                const bytes = new Uint8Array(len);
+                crypto.getRandomValues(bytes);
+                return Array.from(bytes, (b) =>
+                    ("0" + (b & 0xff).toString(16)).slice(-2),
+                )
+                    .join("")
+                    .slice(0, len);
+            }
+            async function integStartOAuth(id, clientId) {
+                const provider = integFindById(id);
+                if (!provider || !provider.oauth) return;
+                const state = integRandomString(24);
+                const stateData = {
+                    id,
+                    client_id: clientId,
+                    started_at: Date.now(),
+                };
+                sessionStorage.setItem(
+                    "integ_oauth_state_" + state,
+                    JSON.stringify(stateData),
+                );
+                sessionStorage.setItem("integ_oauth_last_state", state);
+
+                const params = new URLSearchParams();
+                params.set("client_id", clientId);
+                params.set("redirect_uri", INTEG_REDIRECT_URI);
+                params.set("state", state);
+                params.set("scope", provider.oauth.scope);
+
+                if (provider.oauth.flow === "pkce") {
+                    const verifier = integRandomString(64);
+                    const challenge = await integPkceChallenge(verifier);
+                    stateData.verifier = verifier;
+                    sessionStorage.setItem(
+                        "integ_oauth_state_" + state,
+                        JSON.stringify(stateData),
+                    );
+                    params.set("response_type", "code");
+                    params.set("code_challenge", challenge);
+                    params.set("code_challenge_method", "S256");
+                } else {
+                    // implicit
+                    params.set("response_type", "token");
+                }
+                // Provider-specific tweaks
+                if (id === "reddit") {
+                    params.set("duration", "temporary");
+                }
+
+                window.location.href =
+                    provider.oauth.authUrl + "?" + params.toString();
+            }
+
+            // Called early on page load to capture OAuth redirect responses
+            async function integHandleOAuthCallback() {
+                // Check hash (implicit) first
+                const hashStr = (window.location.hash || "").replace(/^#/, "");
+                const queryStr = (window.location.search || "").replace(
+                    /^\?/,
+                    "",
+                );
+                const hashParams = new URLSearchParams(hashStr);
+                const queryParams = new URLSearchParams(queryStr);
+                const state =
+                    hashParams.get("state") || queryParams.get("state");
+                if (!state) return false;
+                const stored = sessionStorage.getItem(
+                    "integ_oauth_state_" + state,
+                );
+                if (!stored) return false;
+                let parsed;
+                try {
+                    parsed = JSON.parse(stored);
+                } catch (_) {
+                    return false;
+                }
+                const integId = parsed.id;
+                const provider = integFindById(integId);
+                if (!provider) return false;
+
+                // Implicit flow → token in hash
+                const accessToken = hashParams.get("access_token");
+                if (accessToken) {
+                    integSet(integId, {
+                        access_token: accessToken,
+                        token_type: hashParams.get("token_type") || "Bearer",
+                        expires_in: parseInt(
+                            hashParams.get("expires_in") || "0",
+                            10,
+                        ),
+                        connected_at: Date.now(),
+                        client_id: parsed.client_id,
+                        method: "oauth",
+                    });
+                    sessionStorage.removeItem("integ_oauth_state_" + state);
+                    sessionStorage.setItem(
+                        "integ_oauth_just_connected",
+                        integId,
+                    );
+                    // Clean URL
+                    history.replaceState(
+                        null,
+                        "",
+                        window.location.pathname,
+                    );
+                    return true;
+                }
+
+                // PKCE flow → code in query → need backend OR direct token exchange (Spotify allows public PKCE token exchange)
+                const code = queryParams.get("code");
+                if (code && parsed.verifier) {
+                    try {
+                        if (integId === "spotify") {
+                            const body = new URLSearchParams();
+                            body.set("client_id", parsed.client_id);
+                            body.set("grant_type", "authorization_code");
+                            body.set("code", code);
+                            body.set("redirect_uri", INTEG_REDIRECT_URI);
+                            body.set("code_verifier", parsed.verifier);
+                            const res = await fetch(
+                                provider.oauth.tokenUrl,
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type":
+                                            "application/x-www-form-urlencoded",
+                                    },
+                                    body: body.toString(),
+                                },
+                            );
+                            const json = await res.json();
+                            if (json.access_token) {
+                                integSet(integId, {
+                                    access_token: json.access_token,
+                                    refresh_token: json.refresh_token,
+                                    expires_in: json.expires_in,
+                                    token_type: json.token_type,
+                                    connected_at: Date.now(),
+                                    client_id: parsed.client_id,
+                                    method: "oauth",
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error("[integ pkce exchange]", e);
+                    }
+                    sessionStorage.removeItem("integ_oauth_state_" + state);
+                    sessionStorage.setItem(
+                        "integ_oauth_just_connected",
+                        integId,
+                    );
+                    history.replaceState(
+                        null,
+                        "",
+                        window.location.pathname,
+                    );
+                    return true;
+                }
+
+                // Error or denied
+                const err =
+                    hashParams.get("error") || queryParams.get("error");
+                if (err) {
+                    sessionStorage.removeItem("integ_oauth_state_" + state);
+                    sessionStorage.setItem(
+                        "integ_oauth_error",
+                        integId + ":" + err,
+                    );
+                    history.replaceState(
+                        null,
+                        "",
+                        window.location.pathname,
+                    );
+                }
+                return false;
+            }
 
             // ----------------------------------------------------------
             // VOICE-TURN: pipelined LLM + TTS streaming via /voice-turn
@@ -8441,6 +9523,9 @@ Output strictly in this XML structure, nothing else:
                 } else if (page === "import") {
                     title.textContent = "Importer un profil";
                     scroll.appendChild(renderSettingsImport());
+                } else if (page === "integrations") {
+                    title.textContent = "Importer mes données";
+                    scroll.appendChild(renderSettingsIntegrations());
                 }
             }
 
@@ -8513,6 +9598,37 @@ Output strictly in this XML structure, nothing else:
                 );
                 cat.appendChild(group);
                 root.appendChild(cat);
+
+                // Category: Intégrations
+                const integCat = el("div", { class: "settings-category" });
+                integCat.appendChild(
+                    el(
+                        "h3",
+                        { class: "settings-category-title" },
+                        "Intégrations",
+                    ),
+                );
+                const integGroup = el("div", { class: "settings-group" });
+                const connectedCount = INTEGRATIONS.filter((p) =>
+                    integIsConnected(p.id),
+                ).length;
+                integGroup.appendChild(
+                    settingsRow({
+                        icon: "fa-solid fa-plug",
+                        label: "Importer mes données",
+                        value:
+                            connectedCount > 0
+                                ? connectedCount +
+                                  " service" +
+                                  (connectedCount > 1 ? "s" : "") +
+                                  " connecté" +
+                                  (connectedCount > 1 ? "s" : "")
+                                : "Aucun service connecté",
+                        onclick: () => navigateSettings("integrations"),
+                    }),
+                );
+                integCat.appendChild(integGroup);
+                root.appendChild(integCat);
 
                 // Category: Confidentialité
                 const privCat = el("div", { class: "settings-category" });
@@ -10450,6 +11566,832 @@ Output strictly in this XML structure, nothing else:
             }
 
             /* =================================================================
+   9d-bis. INTEGRATIONS PAGE — dropdown + tutorial + sticky Import button
+================================================================= */
+            function integMethodLabel(m) {
+                return m === "oauth"
+                    ? "Connexion via le service"
+                    : m === "api"
+                      ? "Clé d'accès"
+                      : "Fichier d'export";
+            }
+            function integMethodActionLabel(m, providerName) {
+                if (m === "oauth") return "Se connecter à " + providerName;
+                if (m === "api") return "Enregistrer mes identifiants";
+                return "Choisir et importer mon fichier";
+            }
+
+            // Track last-picked service across re-renders within a session
+            let INTEG_LAST_PICK = null;
+
+            function renderSettingsIntegrations() {
+                const root = el("div", { class: "integ-page" });
+
+                // --- Intro ---
+                root.appendChild(
+                    el(
+                        "p",
+                        { class: "integ-intro" },
+                        "Choisis un service dans le menu ci-dessous : le tutoriel s'affichera juste après. Une fois prêt, appuie sur le bouton en bas de l'écran pour importer tes données.",
+                    ),
+                );
+
+                // --- Service dropdown ---
+                root.appendChild(
+                    el(
+                        "p",
+                        { class: "integ-input-label" },
+                        "Service à connecter",
+                    ),
+                );
+                const selectWrap = el("div", { class: "integ-select-wrap" });
+                const select = el("select", { class: "integ-select" });
+                const placeholderOpt = el(
+                    "option",
+                    { value: "" },
+                    "— Sélectionne un service —",
+                );
+                select.appendChild(placeholderOpt);
+
+                const byCat = {};
+                INTEGRATIONS.forEach((p) => {
+                    if (!byCat[p.category]) byCat[p.category] = [];
+                    byCat[p.category].push(p);
+                });
+                const order = [
+                    "Musique",
+                    "Vidéo",
+                    "Gaming",
+                    "Social",
+                    "Sport",
+                    "Lecture",
+                ];
+                order.forEach((cat) => {
+                    if (!byCat[cat]) return;
+                    const group = el("optgroup", { label: cat });
+                    byCat[cat].forEach((p) => {
+                        const opt = el(
+                            "option",
+                            { value: p.id },
+                            (integIsConnected(p.id) ? "✓ " : "") + p.name,
+                        );
+                        group.appendChild(opt);
+                    });
+                    select.appendChild(group);
+                });
+                if (INTEG_LAST_PICK) select.value = INTEG_LAST_PICK;
+                selectWrap.appendChild(select);
+                root.appendChild(selectWrap);
+
+                // --- Tutorial body (changes when selection changes) ---
+                const body = el("div", { class: "integ-page-scroll" });
+                root.appendChild(body);
+
+                // --- Sticky Import bar (always visible at bottom) ---
+                const sticky = el("div", { class: "integ-sticky-bar" });
+                root.appendChild(sticky);
+
+                // State
+                let pickedMethod = null;
+
+                function renderBody() {
+                    body.innerHTML = "";
+                    sticky.innerHTML = "";
+                    const pickedId = select.value;
+                    INTEG_LAST_PICK = pickedId || null;
+                    if (!pickedId) {
+                        const empty = el("div", {
+                            class: "integ-empty-state",
+                        });
+                        empty.innerHTML =
+                            '<i class="fa-solid fa-hand-pointer"></i>Sélectionne un service ci-dessus pour afficher le tutoriel et le bouton d\'import.';
+                        body.appendChild(empty);
+                        return;
+                    }
+                    const provider = integFindById(pickedId);
+                    if (!provider) return;
+                    const methods = provider.methods || [];
+                    if (!pickedMethod || !methods.includes(pickedMethod)) {
+                        pickedMethod = methods[0];
+                    }
+
+                    // Header
+                    const head = el("div", { class: "integ-detail-head" });
+                    const icon = el("div", {
+                        class: "integ-icon",
+                        style: `background:${provider.color}22;color:${provider.color}`,
+                    });
+                    icon.innerHTML = `<i class="${provider.icon}"></i>`;
+                    head.appendChild(icon);
+                    const titleWrap = el("div", {
+                        style: "flex:1;min-width:0",
+                    });
+                    titleWrap.appendChild(el("h2", {}, provider.name));
+                    titleWrap.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-detail-sub" },
+                            provider.summary,
+                        ),
+                    );
+                    const connected = integIsConnected(pickedId);
+                    titleWrap.appendChild(
+                        el(
+                            "div",
+                            {
+                                class:
+                                    "integ-state-pill" +
+                                    (connected ? " connected" : ""),
+                                style: "margin-top:6px",
+                            },
+                            [
+                                el("i", { class: "fa-solid fa-circle" }),
+                                connected ? "Connecté" : "Non connecté",
+                            ],
+                        ),
+                    );
+                    head.appendChild(titleWrap);
+                    body.appendChild(head);
+
+                    // Connection summary + disconnect button if connected
+                    if (connected) {
+                        body.appendChild(
+                            renderIntegConnectedSummary(provider),
+                        );
+                    }
+
+                    // Method tabs (if multiple methods available)
+                    if (methods.length > 1) {
+                        const tabs = el("div", {
+                            class: "integ-method-tabs",
+                        });
+                        methods.forEach((m) => {
+                            const tab = el(
+                                "button",
+                                {
+                                    class:
+                                        "integ-method-tab" +
+                                        (m === pickedMethod
+                                            ? " active"
+                                            : ""),
+                                    type: "button",
+                                },
+                                integMethodLabel(m),
+                            );
+                            tab.addEventListener("click", () => {
+                                pickedMethod = m;
+                                renderBody();
+                            });
+                            tabs.appendChild(tab);
+                        });
+                        body.appendChild(tabs);
+                    }
+
+                    // Tutorial pane
+                    body.appendChild(
+                        renderIntegTutorialPane(provider, pickedMethod),
+                    );
+
+                    // Sticky import button
+                    sticky.appendChild(
+                        renderIntegStickyAction(provider, pickedMethod),
+                    );
+                }
+
+                select.addEventListener("change", () => {
+                    pickedMethod = null;
+                    renderBody();
+                });
+
+                // Show OAuth result toast if any
+                const justConnected = sessionStorage.getItem(
+                    "integ_oauth_just_connected",
+                );
+                if (justConnected) {
+                    sessionStorage.removeItem("integ_oauth_just_connected");
+                    const p = integFindById(justConnected);
+                    if (p) {
+                        showImportToast("✔ " + p.name + " connecté !");
+                        select.value = justConnected;
+                        INTEG_LAST_PICK = justConnected;
+                    }
+                }
+                const oauthErr =
+                    sessionStorage.getItem("integ_oauth_error");
+                if (oauthErr) {
+                    sessionStorage.removeItem("integ_oauth_error");
+                    showImportToast(
+                        "Erreur lors de la connexion : " + oauthErr,
+                    );
+                }
+
+                renderBody();
+                return root;
+            }
+
+            function renderIntegConnectedSummary(provider) {
+                const current = integGet(provider.id) || {};
+                const wrap = el("div", { class: "integ-connected-summary" });
+
+                const addRow = (label, value) => {
+                    wrap.appendChild(
+                        el(
+                            "span",
+                            {
+                                class: "label",
+                                style:
+                                    wrap.children.length > 0
+                                        ? "margin-top:6px"
+                                        : "",
+                            },
+                            label,
+                        ),
+                    );
+                    wrap.appendChild(
+                        el("span", { class: "value" }, value),
+                    );
+                };
+
+                if (current.username) addRow("Nom d'utilisateur", current.username);
+                if (current.steam_id) addRow("SteamID64", current.steam_id);
+                if (current.gamertag) addRow("Gamertag", current.gamertag);
+                if (current.file_imported)
+                    addRow("Fichier importé", current.file_imported);
+                if (current.access_token && !current.username)
+                    addRow("Méthode", "OAuth — jeton actif");
+                if (current.connected_at || current.updated_at) {
+                    const d = new Date(
+                        current.connected_at ||
+                            current.updated_at ||
+                            Date.now(),
+                    );
+                    addRow("Connecté le", d.toLocaleString("fr-FR"));
+                }
+
+                const actions = el("div", {
+                    style:
+                        "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap",
+                });
+                const disconnect = el(
+                    "button",
+                    {
+                        class: "integ-btn danger",
+                        type: "button",
+                        style: "flex:1;min-width:120px",
+                    },
+                    "Se déconnecter",
+                );
+                disconnect.addEventListener("click", () => {
+                    if (
+                        !confirm(
+                            "Déconnecter " +
+                                provider.name +
+                                " et oublier les identifiants enregistrés ?",
+                        )
+                    )
+                        return;
+                    integRemove(provider.id);
+                    showImportToast(provider.name + " déconnecté");
+                    renderSettings();
+                });
+                actions.appendChild(disconnect);
+                wrap.appendChild(actions);
+                return wrap;
+            }
+
+            function renderIntegTutorialPane(provider, method) {
+                const pane = el("div", { class: "integ-method-pane" });
+
+                if (method === "oauth" && provider.oauth) {
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-title" },
+                            "Comment connecter " + provider.name,
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-desc" },
+                            "Tu vas créer une mini-application développeur (gratuit, 2 minutes). C'est elle qui donne à MindMatch le droit de lire tes propres données. Aucun secret n'est partagé.",
+                        ),
+                    );
+
+                    // Redirect URI block
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-input-label" },
+                            "URL de redirection à coller dans le service",
+                        ),
+                    );
+                    const uriRow = el("div", {
+                        style: "display:flex;gap:8px;align-items:stretch",
+                    });
+                    const uriInput = el("input", {
+                        class: "integ-input",
+                        readonly: "readonly",
+                        value: INTEG_REDIRECT_URI,
+                        style:
+                            "flex:1;font-family:ui-monospace,Menlo,monospace;font-size:12px",
+                    });
+                    uriRow.appendChild(uriInput);
+                    const copyBtn = el(
+                        "button",
+                        {
+                            class: "integ-btn ghost",
+                            type: "button",
+                            style: "width:auto;padding:0 14px",
+                        },
+                        "Copier",
+                    );
+                    copyBtn.addEventListener("click", async () => {
+                        try {
+                            await navigator.clipboard.writeText(
+                                INTEG_REDIRECT_URI,
+                            );
+                            copyBtn.textContent = "✓ Copié";
+                            setTimeout(
+                                () => (copyBtn.textContent = "Copier"),
+                                1500,
+                            );
+                        } catch (_) {
+                            uriInput.select();
+                        }
+                    });
+                    uriRow.appendChild(copyBtn);
+                    pane.appendChild(uriRow);
+
+                    pane.appendChild(
+                        el(
+                            "p",
+                            {
+                                class: "integ-input-label",
+                                style: "margin-top:6px",
+                            },
+                            "Étapes à suivre",
+                        ),
+                    );
+                    const list = el("ol", { class: "integ-guide-list" });
+                    (provider.oauth.guide || []).forEach((step) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = step;
+                        list.appendChild(li);
+                    });
+                    pane.appendChild(list);
+                } else if (method === "api" && provider.api) {
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-title" },
+                            "Connexion via clé d'accès",
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-desc" },
+                            "Suis les étapes ci-dessous pour récupérer les informations à saisir, puis appuie sur le bouton en bas de l'écran pour les enregistrer.",
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            {
+                                class: "integ-input-label",
+                                style: "margin-top:4px",
+                            },
+                            "Étapes à suivre",
+                        ),
+                    );
+                    const list = el("ol", { class: "integ-guide-list" });
+                    (provider.api.guide || []).forEach((step) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = step;
+                        list.appendChild(li);
+                    });
+                    pane.appendChild(list);
+                } else if (method === "file" && provider.file) {
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-title" },
+                            "Import du fichier d'export officiel",
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-desc" },
+                            "Suis les étapes pour télécharger ton fichier depuis le service, puis appuie sur le bouton en bas pour le déposer. Le fichier reste stocké localement dans ton navigateur — rien n'est envoyé sur Internet.",
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            {
+                                class: "integ-input-label",
+                                style: "margin-top:4px",
+                            },
+                            "Étapes à suivre",
+                        ),
+                    );
+                    const list = el("ol", { class: "integ-guide-list" });
+                    (provider.file.guide || []).forEach((step) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = step;
+                        list.appendChild(li);
+                    });
+                    pane.appendChild(list);
+                    pane.appendChild(
+                        el(
+                            "p",
+                            {
+                                class: "integ-pane-desc",
+                                style: "margin-top:4px;font-style:italic",
+                            },
+                            "Formats acceptés : " + provider.file.accept,
+                        ),
+                    );
+                }
+
+                return pane;
+            }
+
+            function renderIntegStickyAction(provider, method) {
+                const wrap = document.createDocumentFragment();
+                const connected = integIsConnected(provider.id);
+                const btn = el(
+                    "button",
+                    { class: "integ-btn primary", type: "button" },
+                    (connected ? "Reconfigurer — " : "") +
+                        integMethodActionLabel(method, provider.name),
+                );
+                btn.addEventListener("click", () => {
+                    openIntegConnectModal(provider, method);
+                });
+                wrap.appendChild(btn);
+                return wrap;
+            }
+
+            // Modal that asks for the key/file/etc. when the user clicks Import
+            function openIntegConnectModal(provider, method) {
+                openModal((modal, close) => {
+                    const title =
+                        method === "file"
+                            ? "Importer un fichier — " + provider.name
+                            : "Connexion à " + provider.name;
+                    modal.appendChild(
+                        el("h3", { class: "modal-title" }, title),
+                    );
+
+                    if (method === "oauth" && provider.oauth) {
+                        modal.appendChild(
+                            el(
+                                "p",
+                                { class: "modal-desc" },
+                                "Colle le Client ID de l'application que tu viens de créer chez " +
+                                    provider.name +
+                                    ". Tu seras ensuite redirigé pour autoriser l'accès.",
+                            ),
+                        );
+                        const cur = integGet(provider.id) || {};
+                        const input = el("input", {
+                            class: "modal-input",
+                            type: "text",
+                            placeholder: "Client ID / App ID",
+                            value: cur.client_id || "",
+                            spellcheck: "false",
+                        });
+                        modal.appendChild(input);
+                        const status = el(
+                            "div",
+                            { class: "integ-status" },
+                            "",
+                        );
+                        modal.appendChild(status);
+
+                        const actions = el("div", { class: "modal-actions" });
+                        const cancel = el(
+                            "button",
+                            { class: "modal-btn cancel", type: "button" },
+                            "Annuler",
+                        );
+                        cancel.addEventListener("click", close);
+                        const ok = el(
+                            "button",
+                            { class: "modal-btn primary", type: "button" },
+                            "Continuer",
+                        );
+                        ok.addEventListener("click", async () => {
+                            const id = (input.value || "").trim();
+                            if (!id) {
+                                status.textContent =
+                                    "Renseigne d'abord ton Client ID.";
+                                status.className = "integ-status error";
+                                return;
+                            }
+                            ok.disabled = true;
+                            status.textContent =
+                                "Redirection vers " + provider.name + "…";
+                            status.className = "integ-status";
+                            try {
+                                await integStartOAuth(provider.id, id);
+                            } catch (e) {
+                                ok.disabled = false;
+                                status.textContent =
+                                    "Erreur : " + (e.message || e);
+                                status.className = "integ-status error";
+                            }
+                        });
+                        actions.appendChild(cancel);
+                        actions.appendChild(ok);
+                        modal.appendChild(actions);
+                        setTimeout(() => input.focus(), 100);
+                    } else if (method === "api" && provider.api) {
+                        modal.appendChild(
+                            el(
+                                "p",
+                                { class: "modal-desc" },
+                                "Saisis les informations récupérées depuis " +
+                                    provider.name +
+                                    ".",
+                            ),
+                        );
+                        const inputs = {};
+                        const cur = integGet(provider.id) || {};
+                        (provider.api.fields || []).forEach((f) => {
+                            modal.appendChild(
+                                el(
+                                    "p",
+                                    { class: "integ-input-label" },
+                                    f.label +
+                                        (f.optional
+                                            ? " (facultatif)"
+                                            : ""),
+                                ),
+                            );
+                            const input = el("input", {
+                                class: "modal-input",
+                                type: "text",
+                                placeholder: f.placeholder || "",
+                                value: cur[f.key] || "",
+                                spellcheck: "false",
+                            });
+                            inputs[f.key] = input;
+                            modal.appendChild(input);
+                        });
+                        const status = el(
+                            "div",
+                            { class: "integ-status" },
+                            "",
+                        );
+                        modal.appendChild(status);
+                        const actions = el("div", { class: "modal-actions" });
+                        const cancel = el(
+                            "button",
+                            { class: "modal-btn cancel", type: "button" },
+                            "Annuler",
+                        );
+                        cancel.addEventListener("click", close);
+                        const ok = el(
+                            "button",
+                            { class: "modal-btn primary", type: "button" },
+                            "Enregistrer",
+                        );
+                        ok.addEventListener("click", async () => {
+                            const data = {};
+                            for (const k in inputs) {
+                                data[k] = (inputs[k].value || "").trim();
+                            }
+                            const missing = (provider.api.fields || []).find(
+                                (f) => !f.optional && !data[f.key],
+                            );
+                            if (missing) {
+                                status.textContent =
+                                    "Champ obligatoire : " + missing.label;
+                                status.className = "integ-status error";
+                                return;
+                            }
+                            ok.disabled = true;
+                            status.textContent = "Vérification…";
+                            status.className = "integ-status";
+                            try {
+                                const result = await integVerifyApi(
+                                    provider.id,
+                                    data,
+                                );
+                                integSet(provider.id, {
+                                    ...data,
+                                    ...result,
+                                    method: "api",
+                                    connected_at: Date.now(),
+                                });
+                                status.textContent =
+                                    "✔ Connecté — " +
+                                    (result.summary || provider.name);
+                                status.className = "integ-status ok";
+                                setTimeout(() => {
+                                    close();
+                                    renderSettings();
+                                    showImportToast(
+                                        "✔ " +
+                                            provider.name +
+                                            " connecté !",
+                                    );
+                                }, 700);
+                            } catch (e) {
+                                ok.disabled = false;
+                                status.textContent =
+                                    "Échec : " + (e.message || e);
+                                status.className = "integ-status error";
+                            }
+                        });
+                        actions.appendChild(cancel);
+                        actions.appendChild(ok);
+                        modal.appendChild(actions);
+                    } else if (method === "file" && provider.file) {
+                        modal.appendChild(
+                            el(
+                                "p",
+                                { class: "modal-desc" },
+                                "Sélectionne le fichier que tu as récupéré depuis " +
+                                    provider.name +
+                                    ". Formats acceptés : " +
+                                    provider.file.accept +
+                                    ".",
+                            ),
+                        );
+                        const fileInput = el("input", {
+                            type: "file",
+                            accept: provider.file.accept,
+                            style: "display:none",
+                        });
+                        const drop = el("button", {
+                            class: "integ-file-drop",
+                            type: "button",
+                        });
+                        drop.innerHTML =
+                            '<i class="fa-solid fa-file-arrow-up"></i> Choisir un fichier';
+                        drop.addEventListener("click", () =>
+                            fileInput.click(),
+                        );
+                        const status = el(
+                            "div",
+                            { class: "integ-status" },
+                            "",
+                        );
+                        fileInput.addEventListener("change", async (e) => {
+                            const f =
+                                e.target.files && e.target.files[0];
+                            if (!f) return;
+                            status.textContent =
+                                'Lecture de "' + f.name + '"…';
+                            status.className = "integ-status";
+                            try {
+                                const meta = await integHandleFile(
+                                    provider.id,
+                                    f,
+                                );
+                                integSet(provider.id, {
+                                    file_imported: f.name,
+                                    file_size: f.size,
+                                    file_meta: meta,
+                                    method: "file",
+                                    connected_at: Date.now(),
+                                });
+                                status.textContent =
+                                    "✔ " +
+                                    f.name +
+                                    " importé (" +
+                                    Math.round(f.size / 1024) +
+                                    " Ko)";
+                                status.className = "integ-status ok";
+                                setTimeout(() => {
+                                    close();
+                                    renderSettings();
+                                    showImportToast(
+                                        "✔ " +
+                                            provider.name +
+                                            " importé !",
+                                    );
+                                }, 700);
+                            } catch (err) {
+                                status.textContent =
+                                    "Erreur : " + (err.message || err);
+                                status.className = "integ-status error";
+                            }
+                            fileInput.value = "";
+                        });
+                        modal.appendChild(drop);
+                        modal.appendChild(fileInput);
+                        modal.appendChild(status);
+                        const actions = el("div", { class: "modal-actions" });
+                        const cancel = el(
+                            "button",
+                            { class: "modal-btn cancel", type: "button" },
+                            "Fermer",
+                        );
+                        cancel.addEventListener("click", close);
+                        actions.appendChild(cancel);
+                        modal.appendChild(actions);
+                    }
+                });
+            }
+
+            // Lightweight verification calls (no backend needed)
+            async function integVerifyApi(id, data) {
+                if (id === "lastfm") {
+                    // Public RSS endpoint works without API key
+                    const u = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${encodeURIComponent(data.username)}&limit=1&format=json${data.api_key ? "&api_key=" + encodeURIComponent(data.api_key) : ""}`;
+                    if (data.api_key) {
+                        const res = await fetch(u);
+                        if (!res.ok) throw new Error("HTTP " + res.status);
+                        const json = await res.json();
+                        if (json.error)
+                            throw new Error(
+                                json.message || "Last.fm error",
+                            );
+                        const total =
+                            json?.recenttracks?.["@attr"]?.total || "?";
+                        return {
+                            summary: total + " scrobbles trouvés",
+                        };
+                    }
+                    // Without API key, just trust the username
+                    return { summary: "username enregistré" };
+                }
+                if (id === "steam") {
+                    if (!/^\d{17}$/.test(data.steam_id))
+                        throw new Error(
+                            "SteamID64 invalide (17 chiffres)",
+                        );
+                    if (!data.api_key || data.api_key.length < 20)
+                        throw new Error("Clé API Steam invalide");
+                    // We can't call Steam API from browser (CORS), so trust format
+                    return { summary: "SteamID64 + clé enregistrés" };
+                }
+                if (id === "xbox") {
+                    if (!data.gamertag)
+                        throw new Error("Gamertag requis");
+                    if (
+                        !data.openxbl_key ||
+                        data.openxbl_key.length < 10
+                    )
+                        throw new Error("Clé OpenXBL invalide");
+                    try {
+                        const res = await fetch(
+                            "https://xbl.io/api/v2/account",
+                            {
+                                headers: {
+                                    "X-Authorization": data.openxbl_key,
+                                    Accept: "application/json",
+                                },
+                            },
+                        );
+                        if (res.ok) {
+                            return {
+                                summary: "Compte OpenXBL vérifié",
+                            };
+                        }
+                    } catch (_) {
+                        // CORS fallback — trust input
+                    }
+                    return { summary: "Identifiants enregistrés" };
+                }
+                return { summary: "OK" };
+            }
+
+            // Light file inspection
+            async function integHandleFile(id, file) {
+                const meta = {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type || "",
+                };
+                // Quick peek for tiny CSV/JSON to count entries (skip ZIPs and big files)
+                if (
+                    file.size < 8 * 1024 * 1024 &&
+                    /\.(csv|json|txt)$/i.test(file.name)
+                ) {
+                    try {
+                        const text = await file.text();
+                        const lines = text.split(/\r?\n/).length;
+                        meta.line_count = lines;
+                        if (/\.json$/i.test(file.name)) {
+                            try {
+                                const json = JSON.parse(text);
+                                if (Array.isArray(json))
+                                    meta.entry_count = json.length;
+                            } catch (_) {}
+                        }
+                    } catch (_) {}
+                }
+                return meta;
+            }
+
+            /* =================================================================
    9e. MESSAGING SYSTEM (Supabase-backed)
 ================================================================= */
             function formatChatTime(d) {
@@ -11256,6 +13198,19 @@ Output strictly in this XML structure, nothing else:
                 initVoice();
                 initMatchSearch();
                 initChatInput();
+                // Capture OAuth redirect from integrations (Spotify/YouTube/Reddit/etc.)
+                try {
+                    const captured = await integHandleOAuthCallback();
+                    if (captured) {
+                        // Open settings → integrations to show result
+                        setTimeout(() => {
+                            openSettings();
+                            navigateSettings("integrations");
+                        }, 200);
+                    }
+                } catch (e) {
+                    console.warn("[integ oauth]", e);
+                }
                 document
                     .getElementById("btn-settings")
                     .addEventListener("click", openSettings);
