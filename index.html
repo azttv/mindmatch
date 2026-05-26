@@ -638,15 +638,28 @@
                 padding-bottom: var(--nav-height);
                 opacity: 0;
                 pointer-events: none;
-                transform: translateY(8px);
+                transform: translateY(14px) scale(0.985);
+                filter: blur(4px);
                 transition:
-                    opacity 200ms ease-out,
-                    transform 200ms ease-out;
+                    opacity 360ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                    transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                    filter 360ms ease-out;
+                will-change: transform, opacity, filter;
             }
             .tab-content.active {
                 opacity: 1;
                 pointer-events: auto;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .tab-content {
+                    transition:
+                        opacity 180ms ease-out,
+                        transform 180ms ease-out;
+                    transform: none;
+                    filter: none;
+                }
             }
 
             /* ============================================================
@@ -2907,6 +2920,12 @@
             }
             .flip-card.flipped .flip-inner {
                 transform: rotateY(180deg);
+            }
+            /* When the card is rendered on a profile that's already at 100%,
+               we want the back side visible *without* replaying the flip animation. */
+            .flip-card.instant,
+            .flip-card.instant .flip-inner {
+                transition: none !important;
             }
             .flip-front,
             .flip-back {
@@ -5833,7 +5852,132 @@ Output strictly in this XML structure, nothing else:
             const INTEG_REDIRECT_URI =
                 window.location.origin + window.location.pathname;
 
+            // Prompt sent to external AIs to extract a personal profile.
+            // Mirrors message.txt — output format is "[category] - info" per line,
+            // saved by the user as XML / TXT / MD / JSON.
+            const AI_IMPORT_PROMPT = `Based on all our past conversations and any stored memory you have about me,
+produce a complete personal profile. Extract everything you know or can
+reasonably infer about me. Be exhaustive — I want to capture as much signal
+as possible. Preserve my exact words where possible.
+
+## Output format: one entry per line, [category] - information
+
+### IDENTITY & LIFE SITUATION
+- Age, location, living situation, relationship status, children
+- Languages spoken
+
+### PROFESSIONAL LIFE
+- Current job, role, company, sector, seniority
+- Past significant roles
+- Work style, frustrations, ambitions
+- Freelance / employee / entrepreneur status
+
+### INTELLECTUAL PROFILE
+- Education and self-taught domains
+- Subjects I ask about most frequently
+- Level of expertise per domain (beginner / intermediate / expert)
+- How I think: analytical, intuitive, structured, creative?
+
+### PASSIONS & DEEP INTERESTS
+- Recurring topics I return to voluntarily
+- Hobbies and physical activities
+- Cultural tastes: music, cinema, books, series, games
+- Travel preferences and destinations mentioned
+
+### VALUES & WORLDVIEW
+- Stated values and principles
+- Opinions on society, technology, work, relationships
+- Political or philosophical leanings (only if I stated them explicitly)
+
+### PERSONALITY SIGNALS
+- How I communicate: formal/casual, long/short, direct/nuanced
+- Emotional patterns: what stresses me, what excites me
+- Risk tolerance, rapport with authority, perfectionism level
+- Recurring fears or blockers I've mentioned
+
+### PROJECTS & AMBITIONS
+- Active projects I've worked on with you — what they are, current status
+- Life goals or dreams mentioned
+- Side projects, creative work, entrepreneurial ideas
+
+### RELATIONSHIPS & SOCIAL LIFE
+- What I've shared about friends, family, partner
+- Quality of social life as I've described it
+
+### HABITS & DAILY LIFE
+- Sleep, sport, diet patterns mentioned
+- Productivity tools and methods I use
+- Relationship with screens, social media
+
+### ANYTHING ELSE SIGNIFICANT
+- Recurring themes, strong opinions, notable events I've mentioned
+- Things I've explicitly asked you to remember
+
+## Rules:
+- Only include what is based on actual conversations — do not invent
+- Mark uncertain inferences with (inferred)
+- Mark explicitly stated facts with (explicit)
+- If a category has no data, write "no data"
+- Be as specific and verbatim as possible`;
+
             const INTEGRATIONS = [
+                // --- IA (other AI assistants) ---
+                {
+                    id: "ai-chatgpt",
+                    name: "ChatGPT",
+                    category: "IA",
+                    icon: "fa-solid fa-comment-dots",
+                    color: "#10a37f",
+                    summary:
+                        "Importe le profil que ChatGPT a déduit de tes conversations.",
+                    methods: ["ai"],
+                    ai: {
+                        url: "https://chatgpt.com/",
+                        qParam: "q",
+                    },
+                },
+                {
+                    id: "ai-claude",
+                    name: "Claude",
+                    category: "IA",
+                    icon: "fa-solid fa-brain",
+                    color: "#d97757",
+                    summary:
+                        "Importe le profil que Claude a déduit de tes conversations.",
+                    methods: ["ai"],
+                    ai: {
+                        url: "https://claude.ai/new",
+                        qParam: "q",
+                    },
+                },
+                {
+                    id: "ai-gemini",
+                    name: "Gemini",
+                    category: "IA",
+                    icon: "fa-solid fa-gem",
+                    color: "#4285f4",
+                    summary:
+                        "Importe le profil que Gemini a déduit de tes conversations.",
+                    methods: ["ai"],
+                    ai: {
+                        url: "https://gemini.google.com/app",
+                        qParam: null,
+                    },
+                },
+                {
+                    id: "ai-grok",
+                    name: "Grok",
+                    category: "IA",
+                    icon: "fa-solid fa-bolt",
+                    color: "#1d9bf0",
+                    summary:
+                        "Importe le profil que Grok a déduit de tes conversations.",
+                    methods: ["ai"],
+                    ai: {
+                        url: "https://grok.com/",
+                        qParam: "q",
+                    },
+                },
                 // --- MUSIC ---
                 {
                     id: "spotify",
@@ -7953,6 +8097,15 @@ Output strictly in this XML structure, nothing else:
                     ]),
                 );
 
+                // Decide if we should show the flipped (back) face right away.
+                // We do that only when:
+                //  - completion is already 100% AND we are NOT in the middle of
+                //    animating the unlock (that animation is owned by
+                //    triggerCompletion100() which clears `_unlockAnimating`).
+                const showFlippedNow =
+                    completion >= 100 && !state._unlockAnimating;
+                const flipCardClass =
+                    "flip-card" + (showFlippedNow ? " flipped instant" : "");
                 root.appendChild(
                     el(
                         "div",
@@ -7961,26 +8114,32 @@ Output strictly in this XML structure, nothing else:
                             id: "completion-section",
                         },
                         [
-                            el("div", { class: "flip-card", id: "flip-card" }, [
-                                el("div", { class: "flip-inner" }, [
-                                    el(
-                                        "div",
-                                        { class: "flip-front" },
-                                        buildCompletionFront(completion),
-                                    ),
-                                    el("div", { class: "flip-back" }, [
-                                        buildSpiderCard(),
+                            el(
+                                "div",
+                                { class: flipCardClass, id: "flip-card" },
+                                [
+                                    el("div", { class: "flip-inner" }, [
+                                        el(
+                                            "div",
+                                            { class: "flip-front" },
+                                            buildCompletionFront(completion),
+                                        ),
+                                        el("div", { class: "flip-back" }, [
+                                            buildSpiderCard(),
+                                        ]),
                                     ]),
                                 ]),
-                            ]),
                         ],
                     ),
                 );
-                // If already at 100%, render flipped immediately (no animation)
-                if (completion >= 100) {
+                // If we rendered already flipped, drop the .instant lock after
+                // first paint so future class toggles can animate normally.
+                if (showFlippedNow) {
                     requestAnimationFrame(() => {
-                        const fc = document.getElementById("flip-card");
-                        if (fc) fc.classList.add("flipped");
+                        requestAnimationFrame(() => {
+                            const fc = document.getElementById("flip-card");
+                            if (fc) fc.classList.remove("instant");
+                        });
                     });
                 }
 
@@ -9428,7 +9587,11 @@ Output strictly in this XML structure, nothing else:
             }
 
             function triggerCompletion100() {
-                // Switch to profile tab, then scroll to completion card and flip
+                // Switch to profile tab, then scroll to completion card and flip.
+                // We mark `_unlockAnimating` so the next renderProfile() draws the
+                // card in its NON-flipped state — otherwise we'd never see the
+                // animation, just the back side suddenly appearing.
+                state._unlockAnimating = true;
                 switchTab("profile");
                 setTimeout(() => {
                     renderProfile();
@@ -9436,7 +9599,10 @@ Output strictly in this XML structure, nothing else:
                         const section =
                             document.getElementById("completion-section");
                         const flip = document.getElementById("flip-card");
-                        if (!section || !flip) return;
+                        if (!section || !flip) {
+                            state._unlockAnimating = false;
+                            return;
+                        }
                         section.scrollIntoView({
                             behavior: "smooth",
                             block: "center",
@@ -9448,6 +9614,8 @@ Output strictly in this XML structure, nothing else:
                             }, 250);
                             setTimeout(() => {
                                 flip.classList.remove("zooming");
+                                // Animation done — future renders skip the flip.
+                                state._unlockAnimating = false;
                             }, 1400);
                         }, 650);
                     });
@@ -9520,9 +9688,6 @@ Output strictly in this XML structure, nothing else:
                         scroll.innerHTML = "";
                         scroll.appendChild(node);
                     });
-                } else if (page === "import") {
-                    title.textContent = "Importer un profil";
-                    scroll.appendChild(renderSettingsImport());
                 } else if (page === "integrations") {
                     title.textContent = "Importer mes données";
                     scroll.appendChild(renderSettingsIntegrations());
@@ -9587,13 +9752,6 @@ Output strictly in this XML structure, nothing else:
                         icon: "fa-solid fa-user",
                         label: "Compte",
                         onclick: () => navigateSettings("account"),
-                    }),
-                );
-                group.appendChild(
-                    settingsRow({
-                        icon: "fa-solid fa-file-import",
-                        label: "Importer depuis une autre IA",
-                        onclick: () => navigateSettings("import"),
                     }),
                 );
                 cat.appendChild(group);
@@ -11573,11 +11731,15 @@ Output strictly in this XML structure, nothing else:
                     ? "Connexion via le service"
                     : m === "api"
                       ? "Clé d'accès"
-                      : "Fichier d'export";
+                      : m === "ai"
+                        ? "Via l'assistant IA"
+                        : "Fichier d'export";
             }
             function integMethodActionLabel(m, providerName) {
                 if (m === "oauth") return "Se connecter à " + providerName;
                 if (m === "api") return "Enregistrer mes identifiants";
+                if (m === "ai")
+                    return "Démarrer l'import depuis " + providerName;
                 return "Choisir et importer mon fichier";
             }
 
@@ -11619,6 +11781,7 @@ Output strictly in this XML structure, nothing else:
                     byCat[p.category].push(p);
                 });
                 const order = [
+                    "IA",
                     "Musique",
                     "Vidéo",
                     "Gaming",
@@ -12014,6 +12177,78 @@ Output strictly in this XML structure, nothing else:
                             "Formats acceptés : " + provider.file.accept,
                         ),
                     );
+                } else if (method === "ai" && provider.ai) {
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-title" },
+                            "Import via " + provider.name,
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            { class: "integ-pane-desc" },
+                            "MindMatch ouvre " +
+                                provider.name +
+                                " dans un nouvel onglet avec un prompt prêt à l'emploi. " +
+                                provider.name +
+                                " analyse alors tout ce qu'il sait de toi et te renvoie un profil structuré que tu sauvegardes dans un fichier — puis tu l'importes ici.",
+                        ),
+                    );
+                    pane.appendChild(
+                        el(
+                            "p",
+                            {
+                                class: "integ-input-label",
+                                style: "margin-top:4px",
+                            },
+                            "Étapes à suivre",
+                        ),
+                    );
+                    const list = el("ol", { class: "integ-guide-list" });
+                    const aiSteps = [
+                        "Appuie sur le bouton en bas de l'écran. " +
+                            provider.name +
+                            " s'ouvre dans un nouvel onglet" +
+                            (provider.ai.qParam
+                                ? " avec le prompt déjà saisi"
+                                : "") +
+                            ", et le prompt est copié dans ton presse-papiers en secours.",
+                        provider.ai.qParam
+                            ? "Vérifie que le prompt est bien envoyé (appuie sur <b>Entrée</b> si ce n'est pas fait automatiquement) puis attends la réponse complète."
+                            : "Colle le prompt (<code>Ctrl+V</code> ou <code>Cmd+V</code>) dans la zone de saisie de " +
+                              provider.name +
+                              ", envoie-le et attends la réponse complète.",
+                        "Une fois la réponse générée, copie-la entièrement et colle-la dans un fichier texte sur ton ordinateur (extension <code>.xml</code>, <code>.txt</code>, <code>.md</code> ou <code>.json</code>).",
+                        "Reviens dans MindMatch, ouvre à nouveau cet écran et utilise la zone d'import du modal pour déposer le fichier.",
+                    ];
+                    aiSteps.forEach((step) => {
+                        const li = document.createElement("li");
+                        li.innerHTML = step;
+                        list.appendChild(li);
+                    });
+                    pane.appendChild(list);
+
+                    // Collapsible: show the full prompt for manual copy
+                    const det = el("details", {
+                        class: "import-prompt-details",
+                    });
+                    det.appendChild(
+                        el(
+                            "summary",
+                            {},
+                            "Voir le prompt complet (copie manuelle)",
+                        ),
+                    );
+                    det.appendChild(
+                        el(
+                            "pre",
+                            { class: "import-prompt-pre" },
+                            AI_IMPORT_PROMPT,
+                        ),
+                    );
+                    pane.appendChild(det);
                 }
 
                 return pane;
@@ -12041,7 +12276,9 @@ Output strictly in this XML structure, nothing else:
                     const title =
                         method === "file"
                             ? "Importer un fichier — " + provider.name
-                            : "Connexion à " + provider.name;
+                            : method === "ai"
+                              ? "Import via " + provider.name
+                              : "Connexion à " + provider.name;
                     modal.appendChild(
                         el("h3", { class: "modal-title" }, title),
                     );
@@ -12287,6 +12524,198 @@ Output strictly in this XML structure, nothing else:
                         modal.appendChild(drop);
                         modal.appendChild(fileInput);
                         modal.appendChild(status);
+                        const actions = el("div", { class: "modal-actions" });
+                        const cancel = el(
+                            "button",
+                            { class: "modal-btn cancel", type: "button" },
+                            "Fermer",
+                        );
+                        cancel.addEventListener("click", close);
+                        actions.appendChild(cancel);
+                        modal.appendChild(actions);
+                    } else if (method === "ai" && provider.ai) {
+                        // Two-step modal: 1) open AI with prompt prefilled,
+                        // 2) upload the response file.
+                        modal.appendChild(
+                            el(
+                                "p",
+                                { class: "modal-desc" },
+                                "Deux étapes : envoie le prompt à " +
+                                    provider.name +
+                                    ", récupère sa réponse, sauvegarde-la dans un fichier puis dépose-la ci-dessous.",
+                            ),
+                        );
+
+                        // --- STEP 1: redirect button ---
+                        modal.appendChild(
+                            el(
+                                "p",
+                                { class: "integ-input-label" },
+                                "Étape 1 — Envoyer le prompt à " +
+                                    provider.name,
+                            ),
+                        );
+                        const openBtn = el(
+                            "button",
+                            {
+                                class: "integ-btn primary",
+                                type: "button",
+                            },
+                            "",
+                        );
+                        openBtn.innerHTML =
+                            '<i class="fa-solid fa-arrow-up-right-from-square" style="margin-right:8px"></i> Ouvrir ' +
+                            provider.name +
+                            " et copier le prompt";
+                        const step1Status = el(
+                            "div",
+                            { class: "integ-status" },
+                            "",
+                        );
+                        openBtn.addEventListener("click", async () => {
+                            // 1. copy prompt to clipboard as fallback
+                            let copied = false;
+                            try {
+                                await navigator.clipboard.writeText(
+                                    AI_IMPORT_PROMPT,
+                                );
+                                copied = true;
+                            } catch (_) {
+                                try {
+                                    const ta =
+                                        document.createElement("textarea");
+                                    ta.value = AI_IMPORT_PROMPT;
+                                    ta.style.position = "fixed";
+                                    ta.style.opacity = "0";
+                                    document.body.appendChild(ta);
+                                    ta.select();
+                                    copied =
+                                        document.execCommand("copy");
+                                    ta.remove();
+                                } catch (_) {}
+                            }
+                            // 2. build URL with prompt embedded if supported
+                            let openUrl = provider.ai.url;
+                            let prefilled = false;
+                            if (provider.ai.qParam) {
+                                try {
+                                    const u = new URL(provider.ai.url);
+                                    u.searchParams.set(
+                                        provider.ai.qParam,
+                                        AI_IMPORT_PROMPT,
+                                    );
+                                    const candidate = u.toString();
+                                    // safety: cap URL at ~7500 chars
+                                    if (candidate.length < 7500) {
+                                        openUrl = candidate;
+                                        prefilled = true;
+                                    }
+                                } catch (_) {}
+                            }
+                            // 3. status message
+                            step1Status.className = "integ-status ok";
+                            if (prefilled) {
+                                step1Status.textContent =
+                                    "✔ Prompt pré-rempli — appuie sur Entrée si rien ne s'envoie.";
+                            } else if (copied) {
+                                step1Status.textContent =
+                                    "✔ Prompt copié — colle-le dans " +
+                                    provider.name +
+                                    " puis envoie-le.";
+                            } else {
+                                step1Status.textContent =
+                                    "Ouvre le prompt complet plus haut et copie-le manuellement.";
+                                step1Status.className =
+                                    "integ-status error";
+                            }
+                            // 4. open AI in new tab
+                            window.open(
+                                openUrl,
+                                "_blank",
+                                "noopener,noreferrer",
+                            );
+                        });
+                        modal.appendChild(openBtn);
+                        modal.appendChild(step1Status);
+
+                        // --- STEP 2: file upload ---
+                        modal.appendChild(
+                            el(
+                                "p",
+                                {
+                                    class: "integ-input-label",
+                                    style: "margin-top:8px",
+                                },
+                                "Étape 2 — Importer la réponse",
+                            ),
+                        );
+                        const accept = ".xml,.txt,.md,.json,.html";
+                        const fileInput = el("input", {
+                            type: "file",
+                            accept,
+                            style: "display:none",
+                        });
+                        const drop = el("button", {
+                            class: "integ-file-drop",
+                            type: "button",
+                        });
+                        drop.innerHTML =
+                            '<i class="fa-solid fa-file-arrow-up"></i> Déposer la réponse (XML, TXT, MD, JSON)';
+                        drop.addEventListener("click", () =>
+                            fileInput.click(),
+                        );
+                        const step2Status = el(
+                            "div",
+                            { class: "integ-status" },
+                            "",
+                        );
+                        fileInput.addEventListener("change", async (e) => {
+                            const f =
+                                e.target.files && e.target.files[0];
+                            if (!f) return;
+                            step2Status.textContent =
+                                'Lecture de "' + f.name + '"…';
+                            step2Status.className = "integ-status";
+                            try {
+                                const meta = await integHandleFile(
+                                    provider.id,
+                                    f,
+                                );
+                                integSet(provider.id, {
+                                    file_imported: f.name,
+                                    file_size: f.size,
+                                    file_meta: meta,
+                                    method: "ai",
+                                    ai_source: provider.id,
+                                    connected_at: Date.now(),
+                                });
+                                step2Status.textContent =
+                                    "✔ " +
+                                    f.name +
+                                    " importé (" +
+                                    Math.round(f.size / 1024) +
+                                    " Ko)";
+                                step2Status.className = "integ-status ok";
+                                setTimeout(() => {
+                                    close();
+                                    renderSettings();
+                                    showImportToast(
+                                        "✔ Profil " +
+                                            provider.name +
+                                            " importé !",
+                                    );
+                                }, 700);
+                            } catch (err) {
+                                step2Status.textContent =
+                                    "Erreur : " + (err.message || err);
+                                step2Status.className = "integ-status error";
+                            }
+                            fileInput.value = "";
+                        });
+                        modal.appendChild(drop);
+                        modal.appendChild(fileInput);
+                        modal.appendChild(step2Status);
+
                         const actions = el("div", { class: "modal-actions" });
                         const cancel = el(
                             "button",
