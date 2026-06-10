@@ -488,6 +488,8 @@
         <title>MindMatch — Find your mind match.</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <!-- Warm TLS/H2 to API worker at page load = first voice turn skips handshake -->
+        <link rel="preconnect" href="https://api.mindmatch.fr" crossorigin />
         <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
             rel="stylesheet"
@@ -6767,6 +6769,29 @@ as possible. Preserve my exact words where possible.
                     }
                 });
 
+                // LATENCY: fire the /voice-turn request NOW, in parallel with
+                // MediaSource init below. No reason to serialize them.
+                const ac = new AbortController();
+                if (VOICE.currentVoiceTurnAbort) {
+                    try {
+                        VOICE.currentVoiceTurnAbort.abort();
+                    } catch (_) {}
+                }
+                VOICE.currentVoiceTurnAbort = ac;
+                const fetchPromise = fetch(VOICE_TURN_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: fullMessages,
+                        model: "gemini-3-flash-preview",
+                        voice: VOICE.ttsVoice,
+                    }),
+                    signal: ac.signal,
+                });
+                // Avoid unhandled-rejection while we await MSE init below;
+                // the real `await fetchPromise` later still sees the error.
+                fetchPromise.catch(() => {});
+
                 let mseSupported = true;
                 try {
                     await mseReady;
@@ -6811,24 +6836,8 @@ as possible. Preserve my exact words where possible.
                 const fallbackChunks = [];
 
                 let res;
-                const ac = new AbortController();
-                if (VOICE.currentVoiceTurnAbort) {
-                    try {
-                        VOICE.currentVoiceTurnAbort.abort();
-                    } catch (_) {}
-                }
-                VOICE.currentVoiceTurnAbort = ac;
                 try {
-                    res = await fetch(VOICE_TURN_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            messages: fullMessages,
-                            model: "gemini-3-flash-preview",
-                            voice: VOICE.ttsVoice,
-                        }),
-                        signal: ac.signal,
-                    });
+                    res = await fetchPromise;
                 } catch (e) {
                     if (e.name === "AbortError") {
                         dbgLog("chat", "voice-turn aborted (barge-in)");
@@ -8450,11 +8459,12 @@ as possible. Preserve my exact words where possible.
                 utteranceStart: 0,
                 // VAD tunables (tuned for low latency)
                 vadThreshold: 0.025, // RMS threshold for "speaking"
-                vadSilenceMs: 750, // ms of silence ends utterance (was 1100)
+                vadSilenceMs: 600, // ms of silence ends utterance (was 750) — biggest perceived-latency knob
                 minUtteranceMs: 250, // shorter = ignored (was 400)
                 maxUtteranceMs: 15000, // safety cutoff
                 currentAudio: null,
                 currentVoiceTurnAbort: null, // AbortController for in-flight /voice-turn (barge-in)
+                warmInterval: null, // keep-warm OPTIONS ping while voicechat open
                 ttsVoice: "WeAAwKYcS06VmXw086yZ",
                 // Voicechat mode state
                 chatMode: false,
@@ -8814,10 +8824,11 @@ as possible. Preserve my exact words where possible.
                 } catch (_) {
                     // already stopped — fall through
                 }
-                // Hard timeout in case onstop never fires (some browsers)
+                // Hard timeout in case onstop never fires (some browsers).
+                // 300ms is plenty — onstop normally fires in <50ms.
                 await Promise.race([
                     stopPromise,
-                    new Promise((r) => setTimeout(r, 500)),
+                    new Promise((r) => setTimeout(r, 300)),
                 ]);
 
                 const chunks = VOICE.recordedChunks.slice();
@@ -8937,14 +8948,20 @@ as possible. Preserve my exact words where possible.
 
                 // Pre-warm: open a TLS handshake to the worker now (in parallel
                 // with mic startup) so the first /voice-turn call doesn't
-                // pay handshake cost. Fire-and-forget HEAD/GET → CORS preflight.
-                // Cloudflare answers OPTIONS in ~10ms, keeps TLS pooled.
-                try {
-                    fetch(VOICE_TURN_URL, {
-                        method: "OPTIONS",
-                        headers: { "Content-Type": "application/json" },
-                    }).catch(() => {});
-                } catch (_) {}
+                // pay handshake cost. Then re-warm every 25s — idle HTTP/2
+                // connections get dropped by browsers/proxies after ~30-60s,
+                // and a cold reconnect costs ~100-200ms on the next turn.
+                const warmPing = () => {
+                    try {
+                        fetch(VOICE_TURN_URL, {
+                            method: "OPTIONS",
+                            headers: { "Content-Type": "application/json" },
+                        }).catch(() => {});
+                    } catch (_) {}
+                };
+                warmPing();
+                if (VOICE.warmInterval) clearInterval(VOICE.warmInterval);
+                VOICE.warmInterval = setInterval(warmPing, 25000);
 
                 const ok = await startMicPipeline();
                 if (ok) setVCStatus("Je t'écoute…");
@@ -8953,6 +8970,10 @@ as possible. Preserve my exact words where possible.
             function leaveVoiceChat() {
                 dbgLog("system", "■ leaveVoiceChat");
                 VOICE.chatMode = false;
+                if (VOICE.warmInterval) {
+                    clearInterval(VOICE.warmInterval);
+                    VOICE.warmInterval = null;
+                }
                 const overlay = document.getElementById("vc-overlay");
                 if (overlay) overlay.classList.remove("is-open");
                 stopMicPipeline();
